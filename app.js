@@ -74,8 +74,10 @@ function updateVisualMotion() {
 window.addEventListener("scroll", updateVisualMotion, { passive: true });
 window.addEventListener("resize", updateVisualMotion);
 window.addEventListener("pointermove", (event) => {
-  rootStyle.setProperty("--pointer-x", `${Math.round((event.clientX / window.innerWidth) * 100)}%`);
-  rootStyle.setProperty("--pointer-y", `${Math.round((event.clientY / window.innerHeight) * 100)}%`);
+  const x = (event.clientX / window.innerWidth - 0.5) * 18;
+  const y = (event.clientY / window.innerHeight - 0.5) * 12;
+  rootStyle.setProperty("--move-x", `${x.toFixed(2)}px`);
+  rootStyle.setProperty("--move-y", `${y.toFixed(2)}px`);
 }, { passive: true });
 
 function api(path, options = {}) {
