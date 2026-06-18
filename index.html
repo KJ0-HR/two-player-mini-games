@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>刷双人小游戏</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel setup-panel" id="authPanel">
+        <div class="brand">
+          <div class="brand-mark">2P</div>
+          <div>
+            <h1>刷双人小游戏</h1>
+            <p>先登录或注册账户，再进入双人房间。</p>
+          </div>
+        </div>
+
+        <form id="authForm" class="room-form">
+          <label class="field">
+            <span>游戏ID</span>
+            <input id="accountId" name="accountId" maxlength="16" autocomplete="username" placeholder="例如 player01" />
+          </label>
+
+          <label class="field">
+            <span>密码</span>
+            <input id="accountPassword" name="accountPassword" type="password" maxlength="32" autocomplete="current-password" placeholder="至少 4 位" />
+          </label>
+
+          <div class="actions">
+            <button type="submit" data-action="login">登录</button>
+            <button type="submit" class="secondary" data-action="register">注册</button>
+          </div>
+        </form>
+
+        <p class="status" id="authStatus" role="status"></p>
+      </section>
+
+      <section class="panel setup-panel hidden" id="setupPanel">
+        <div class="brand">
+          <div class="brand-mark">2P</div>
+          <div>
+            <h1>刷双人小游戏</h1>
+            <p>房主一键开房，玩家二输入房间号加入。</p>
+          </div>
+        </div>
+
+        <div class="account-bar">
+          <div class="account-profile">
+            <div class="avatar-preview" id="accountAvatar">?</div>
+            <span>当前账户：<strong id="accountLabel"></strong></span>
+          </div>
+          <div class="account-actions">
+            <input id="avatarFile" class="file-input" type="file" accept="image/*" />
+            <button type="button" class="secondary" id="chooseAvatar">选择头像</button>
+            <button type="button" class="secondary" id="logoutAccount">退出登录</button>
+          </div>
+        </div>
+
+        <form id="roomForm" class="room-form">
+          <div class="host-box">
+            <label class="field">
+              <span>房主选择游戏</span>
+              <select id="gameId" name="gameId">
+                <option value="1">游戏 1：数学计算能力</option>
+                <option value="2">游戏 2：五子棋对决</option>
+                <option value="3">游戏 3：待接入</option>
+                <option value="4">游戏 4：待接入</option>
+                <option value="5">游戏 5：待接入</option>
+              </select>
+            </label>
+            <button class="primary-action" type="submit" data-action="create">我是房主，一键创建房间</button>
+          </div>
+
+          <div class="join-box">
+            <label class="field">
+              <span>玩家二输入房间号</span>
+              <input id="roomCode" name="roomCode" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="例如 5832" />
+            </label>
+            <button type="submit" class="secondary" data-action="join">加入房间</button>
+          </div>
+        </form>
+
+        <p class="status" id="setupStatus" role="status"></p>
+      </section>
+
+      <section class="panel lobby-panel hidden" id="lobbyPanel">
+        <header class="lobby-header">
+          <div>
+            <p class="eyebrow">房间 <span id="activeRoomCode"></span></p>
+            <h2 id="activeGameName">游戏 1：待接入</h2>
+          </div>
+          <button class="secondary" id="leaveRoom" type="button">离开</button>
+        </header>
+
+        <div class="copy-row">
+          <input id="inviteLink" readonly />
+          <button id="copyInvite" type="button">复制邀请链接</button>
+        </div>
+
+        <div class="lobby-grid">
+          <section class="players">
+            <h3>玩家</h3>
+            <div id="playerList" class="player-list"></div>
+          </section>
+
+          <section class="game-placeholder">
+            <h3>游戏区域</h3>
+            <div class="stage" id="gameStage">
+              <div class="stage-card">
+                <strong id="stageTitle">等待两位玩家进入</strong>
+                <span id="stageHint">这里之后会加载对应游戏模块。</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="lobby-actions">
+          <button id="readyToggle" type="button">准备</button>
+          <button id="startGame" type="button" disabled>开始游戏</button>
+        </div>
+
+        <p class="status" id="lobbyStatus" role="status"></p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: two-player-mini-games
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: accounts
+      mountPath: /var/data
+      sizeGB: 1
