@@ -1117,5 +1117,5 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, "0.0.0.0", () => {
-  console.log(`刷双人小游戏房间框架已启动：http://localhost:${port}`);
+  console.log(`双人小游戏房间框架已启动：http://localhost:${port}`);
 });

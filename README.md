@@ -1,4 +1,4 @@
-# 刷双人小游戏
+# 双人小游戏
 
 这是一个双人联机小游戏项目。支持本地测试，也可以部署到公网后让不同城市的玩家一起玩。
 
@@ -35,7 +35,35 @@ https://你的项目地址.onrender.com
    - Health Check: `/api/health`
 5. 部署完成后，把 Render 给你的 `https://...` 网址发给玩家。
 
-项目已支持 `DATA_DIR`，部署时账户文件会保存在持久化目录中。摄像头功能需要 HTTPS，Render 这类公网平台默认满足。
+摄像头功能需要 HTTPS，Render 这类公网平台默认满足。
+
+### 长期保存账户：Supabase 数据库
+
+Render 免费服务重启后，本地文件可能会丢失。长期使用时，推荐把账户保存到 Supabase 数据库。
+
+1. 打开 Supabase，创建一个新项目。
+2. 进入 SQL Editor，运行下面的建表语句：
+
+```sql
+create table if not exists public.accounts (
+  account_id text primary key,
+  display_id text not null,
+  salt text not null,
+  password_hash text not null,
+  avatar text default '',
+  created_at timestamptz default now()
+);
+```
+
+3. 在 Supabase 项目的 Settings -> API 里复制：
+   - Project URL
+   - service_role secret key
+4. 打开 Render 项目，进入 Environment，添加：
+   - `SUPABASE_URL`：填 Supabase 的 Project URL
+   - `SUPABASE_SERVICE_ROLE_KEY`：填 Supabase 的 service_role secret key
+5. 保存后，在 Render 里 Manual Deploy -> Deploy latest commit。
+
+注意：`SUPABASE_SERVICE_ROLE_KEY` 只能填在 Render 的 Environment 里，不要写进网页代码，也不要发给别人。
 
 ### 其他平台
 
@@ -53,7 +81,7 @@ npm start
 - 游戏ID唯一，不能重复注册。
 - 每个账户由游戏ID和密码决定。
 - 可选择本地图片作为头像，头像会压缩后保存到账户中。
-- 账户信息和头像保存在本文件夹的 `accounts.json` 中。
+- 本地测试时账户信息保存在本文件夹的 `accounts.json` 中；公网长期使用时会优先保存到 Supabase 数据库。
 - 房主选择 1 到 5 号游戏，然后一键创建房间。
 - 系统自动生成 4 位数字房间号。
 - 玩家二只需要输入房间号即可加入。
