@@ -1,13 +1,18 @@
 import { createReadStream, existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { dirname, extname, join, normalize } from "node:path";
+import { tmpdir } from "node:os";
+import { dirname, extname, join, normalize, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const dataDir = process.env.DATA_DIR || root;
-const accountsPath = process.env.ACCOUNTS_PATH || join(dataDir, "accounts.json");
+let accountsPath = process.env.ACCOUNTS_PATH || join(dataDir, "accounts.json");
+const fallbackAccountsPath = join(tmpdir(), "two-player-mini-games", "accounts.json");
+const supabaseUrl = String(process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+const supabaseServiceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
+const accountStore = supabaseUrl && supabaseServiceKey ? "supabase" : "file";
 const port = Number(process.env.PORT || 5177);
 const rooms = new Map();
 const ROUND_MS = 60000;
@@ -36,13 +41,131 @@ async function loadAccounts() {
     if (error.code === "ENOENT") {
       return { accounts: {} };
     }
+    if ((error.code === "EACCES" || error.code === "EPERM") && accountsPath !== fallbackAccountsPath) {
+      accountsPath = fallbackAccountsPath;
+      return loadAccounts();
+    }
     throw error;
   }
 }
 
 async function saveAccounts(data) {
-  await mkdir(dirname(accountsPath), { recursive: true });
-  await writeFile(accountsPath, JSON.stringify(data, null, 2), "utf8");
+  try {
+    await mkdir(dirname(accountsPath), { recursive: true });
+    await writeFile(accountsPath, JSON.stringify(data, null, 2), "utf8");
+  } catch (error) {
+    if ((error.code === "EACCES" || error.code === "EPERM") && accountsPath !== fallbackAccountsPath) {
+      accountsPath = fallbackAccountsPath;
+      await saveAccounts(data);
+      return;
+    }
+    throw error;
+  }
+}
+
+function accountFromDatabase(row) {
+  if (!row) {
+    return null;
+  }
+  return {
+    id: row.display_id || row.account_id,
+    salt: row.salt,
+    passwordHash: row.password_hash,
+    avatar: row.avatar || "",
+    createdAt: row.created_at,
+  };
+}
+
+async function supabaseRequest(path, options = {}) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    const error = new Error(`数据库请求失败：${response.status} ${detail}`);
+    error.status = response.status;
+    error.detail = detail;
+    throw error;
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function getStoredAccount(key) {
+  if (accountStore === "supabase") {
+    const rows = await supabaseRequest(
+      `accounts?account_id=eq.${encodeURIComponent(key)}&select=account_id,display_id,salt,password_hash,avatar,created_at&limit=1`
+    );
+    return accountFromDatabase(rows?.[0]);
+  }
+
+  const data = await loadAccounts();
+  return data.accounts[key] || null;
+}
+
+async function createStoredAccount(key, account) {
+  if (accountStore === "supabase") {
+    try {
+      await supabaseRequest("accounts", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          account_id: key,
+          display_id: account.id,
+          salt: account.salt,
+          password_hash: account.passwordHash,
+          avatar: account.avatar || "",
+          created_at: account.createdAt,
+        }),
+      });
+      return;
+    } catch (error) {
+      if (error.status === 409) {
+        throw new Error("这个游戏ID已经被注册，请换一个。");
+      }
+      throw error;
+    }
+  }
+
+  const data = await loadAccounts();
+  data.accounts[key] = account;
+  await saveAccounts(data);
+}
+
+async function updateStoredAvatar(key, avatar) {
+  if (accountStore === "supabase") {
+    const account = await getStoredAccount(key);
+    if (!account) {
+      throw new Error("账户不存在，请重新登录。");
+    }
+    await supabaseRequest(`accounts?account_id=eq.${encodeURIComponent(key)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ avatar }),
+    });
+    account.avatar = avatar;
+    return account;
+  }
+
+  const data = await loadAccounts();
+  const account = data.accounts[key];
+  if (!account) {
+    throw new Error("账户不存在，请重新登录。");
+  }
+  account.avatar = avatar;
+  await saveAccounts(data);
+  return account;
 }
 
 function normalizeAccountId(value) {
@@ -88,22 +211,21 @@ async function registerAccount(payload) {
   const password = String(payload.password || "");
   validateAccountInput(accountId, password);
 
-  const data = await loadAccounts();
   const key = accountId.toLowerCase();
-  if (data.accounts[key]) {
+  if (await getStoredAccount(key)) {
     throw new Error("这个游戏ID已经被注册，请换一个。");
   }
 
   const salt = randomBytes(16).toString("hex");
-  data.accounts[key] = {
+  const account = {
     id: accountId,
     salt,
     passwordHash: hashPassword(password, salt),
     avatar: "",
     createdAt: new Date().toISOString(),
   };
-  await saveAccounts(data);
-  return publicAccount(data.accounts[key]);
+  await createStoredAccount(key, account);
+  return publicAccount(account);
 }
 
 async function loginAccount(payload) {
@@ -111,8 +233,7 @@ async function loginAccount(payload) {
   const password = String(payload.password || "");
   validateAccountInput(accountId, password);
 
-  const data = await loadAccounts();
-  const account = data.accounts[accountId.toLowerCase()];
+  const account = await getStoredAccount(accountId.toLowerCase());
   if (!account || account.passwordHash !== hashPassword(password, account.salt)) {
     throw new Error("游戏ID或密码不正确。");
   }
@@ -126,13 +247,7 @@ async function updateAvatar(payload) {
     throw new Error("请先登录账户。");
   }
 
-  const data = await loadAccounts();
-  const account = data.accounts[accountId.toLowerCase()];
-  if (!account) {
-    throw new Error("账户不存在，请重新登录。");
-  }
-  account.avatar = avatar;
-  await saveAccounts(data);
+  const account = await updateStoredAvatar(accountId.toLowerCase(), avatar);
   return publicAccount(account);
 }
 
@@ -672,6 +787,7 @@ async function handleApi(request, response, url) {
       ok: true,
       rooms: rooms.size,
       dataDir,
+      accountStore,
     });
     return;
   }
@@ -977,9 +1093,10 @@ async function handleApi(request, response, url) {
 }
 
 function serveStatic(request, response, url) {
-  const requestedPath = url.pathname === "/" ? "/index.html" : decodeURIComponent(url.pathname);
+  const requestedPath = url.pathname === "/" ? "index.html" : decodeURIComponent(url.pathname).replace(/^\/+/, "");
   const filePath = normalize(join(root, requestedPath));
-  if (!filePath.startsWith(root) || !existsSync(filePath)) {
+  const relativePath = relative(root, filePath);
+  if (relativePath.startsWith("..") || relativePath === "" || !existsSync(filePath)) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Not found");
     return;
