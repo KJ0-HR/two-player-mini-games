@@ -33,6 +33,7 @@ const setupPanel = document.querySelector("#setupPanel");
 const lobbyPanel = document.querySelector("#lobbyPanel");
 const roomForm = document.querySelector("#roomForm");
 const gameId = document.querySelector("#gameId");
+const gameTiles = document.querySelectorAll(".game-slice");
 const roomCode = document.querySelector("#roomCode");
 const setupStatus = document.querySelector("#setupStatus");
 const accountLabel = document.querySelector("#accountLabel");
@@ -62,6 +63,12 @@ function cleanRoomCode(value) {
 function setStatus(target, message, isError = false) {
   target.textContent = message;
   target.style.color = isError ? "#a43e27" : "";
+}
+
+function syncSelectedGame() {
+  gameTiles.forEach((tile) => {
+    tile.classList.toggle("active", tile.dataset.game === gameId.value);
+  });
 }
 
 function updateVisualMotion() {
@@ -126,6 +133,7 @@ function showSetup() {
   lobbyPanel.classList.add("hidden");
   accountLabel.textContent = state.account.id;
   renderAvatar(accountAvatar, state.account.id, state.account.avatar);
+  syncSelectedGame();
   updateVisualMotion();
 }
 
@@ -639,6 +647,15 @@ async function runCameraChallenge() {
 roomCode.addEventListener("input", () => {
   roomCode.value = cleanRoomCode(roomCode.value);
 });
+
+gameTiles.forEach((tile) => {
+  tile.addEventListener("click", () => {
+    gameId.value = tile.dataset.game;
+    syncSelectedGame();
+  });
+});
+
+gameId.addEventListener("change", syncSelectedGame);
 
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();

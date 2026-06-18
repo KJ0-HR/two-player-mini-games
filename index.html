@@ -68,14 +68,6 @@
           </section>
 
           <section class="panel setup-panel hidden" id="setupPanel">
-            <div class="brand">
-              <div class="brand-mark">2P</div>
-              <div>
-                <h2>创建房间</h2>
-                <p>房主一键开房，玩家二输入房间号加入。</p>
-              </div>
-            </div>
-
             <div class="account-bar">
               <div class="account-profile">
                 <div class="avatar-preview" id="accountAvatar">?</div>
@@ -89,24 +81,47 @@
             </div>
 
             <form id="roomForm" class="room-form">
-              <div class="host-box">
-                <label class="field">
-                  <span>房主选择游戏</span>
-                  <select id="gameId" name="gameId">
-                    <option value="1">游戏 1：数学计算能力</option>
-                    <option value="2">游戏 2：五子棋对决</option>
-                    <option value="3">游戏 3：待接入</option>
-                    <option value="4">游戏 4：待接入</option>
-                    <option value="5">游戏 5：待接入</option>
-                  </select>
-                </label>
-                <button class="primary-action" type="submit" data-action="create">我是房主，一键创建房间</button>
+              <label class="field game-select-field">
+                <span>房主选择游戏</span>
+                <select id="gameId" name="gameId">
+                  <option value="1">游戏 1：数学计算能力</option>
+                  <option value="2">游戏 2：五子棋对决</option>
+                  <option value="3">游戏 3：待接入</option>
+                  <option value="4">游戏 4：待接入</option>
+                  <option value="5">游戏 5：待接入</option>
+                </select>
+              </label>
+
+              <div class="game-split-selector" aria-label="游戏选择">
+                <button type="button" class="game-slice active" data-game="1">
+                  <img src="./assets/game-math.png" alt="" />
+                  <span class="slice-index">01</span>
+                  <strong>数学计算能力比拼</strong>
+                </button>
+                <button type="button" class="game-slice" data-game="2">
+                  <img src="./assets/game-gomoku.png" alt="" />
+                  <span class="slice-index">02</span>
+                  <strong>五子棋对决</strong>
+                </button>
+                <button type="button" class="game-slice empty" data-game="3">
+                  <span class="slice-index">03</span>
+                  <strong>敬请期待</strong>
+                </button>
+                <button type="button" class="game-slice empty" data-game="4">
+                  <span class="slice-index">04</span>
+                  <strong>敬请期待</strong>
+                </button>
+                <button type="button" class="game-slice empty" data-game="5">
+                  <span class="slice-index">05</span>
+                  <strong>敬请期待</strong>
+                </button>
               </div>
 
-              <div class="join-box">
-                <label class="field">
+              <div class="room-control-bar">
+                <button class="primary-action" type="submit" data-action="create">我是房主，一键创建房间</button>
+                <label class="field join-field">
                   <span>玩家二输入房间号</span>
-                  <input id="roomCode" name="roomCode" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="例如 5832" />
+                  <input id="roomCode" name="roomCode" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="5832" />
                 </label>
                 <button type="submit" class="secondary" data-action="join">加入房间</button>
               </div>

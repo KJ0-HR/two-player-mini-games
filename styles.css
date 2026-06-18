@@ -552,6 +552,401 @@ body[data-view="lobby"] .hero-layout {
   display: none;
 }
 
+body[data-view="auth"] {
+  background: #171411;
+}
+
+body[data-view="auth"]::before,
+body[data-view="auth"] .scene-layers,
+body[data-view="setup"]::before,
+body[data-view="setup"] .scene-layers {
+  display: none;
+}
+
+body[data-view="auth"] .app-shell {
+  width: 100%;
+  padding: 0;
+}
+
+body[data-view="auth"] .page-frame {
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background:
+    linear-gradient(90deg, rgba(10, 9, 8, 0.44), rgba(10, 9, 8, 0.04) 58%, rgba(10, 9, 8, 0.18)),
+    url("./assets/login-board.png") center / cover no-repeat;
+}
+
+body[data-view="auth"] .page-frame::before {
+  background:
+    radial-gradient(circle at 36% 36%, rgba(255, 231, 188, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.34));
+}
+
+body[data-view="auth"] .frame-nav {
+  min-height: 72px;
+  border-bottom: 0;
+  color: rgba(244, 234, 215, 0.86);
+}
+
+body[data-view="auth"] .nav-links {
+  color: rgba(244, 234, 215, 0.72);
+}
+
+body[data-view="auth"] .menu-button.secondary {
+  color: rgba(244, 234, 215, 0.86);
+  background: rgba(20, 18, 16, 0.36);
+  border-color: rgba(244, 234, 215, 0.24);
+}
+
+body[data-view="auth"] .hero-layout {
+  min-height: calc(100vh - 72px);
+  display: block;
+  padding: 0;
+}
+
+body[data-view="auth"] .hero-copy,
+body[data-view="auth"] .hero-visual {
+  display: none;
+}
+
+body[data-view="auth"] #authPanel {
+  position: absolute;
+  left: clamp(180px, 16.4vw, 310px);
+  top: clamp(110px, 15vh, 180px);
+  width: clamp(420px, 34vw, 590px);
+  min-height: clamp(390px, 45vh, 520px);
+  padding: clamp(24px, 3vw, 44px);
+  color: rgba(246, 235, 213, 0.92);
+  border: 1px solid rgba(201, 166, 105, 0.34);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 32%),
+    rgba(13, 17, 14, 0.68);
+  box-shadow:
+    inset 0 0 36px rgba(0, 0, 0, 0.42),
+    0 26px 80px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(1.4px);
+}
+
+body[data-view="auth"] #authPanel::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(201, 166, 105, 0.15);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+body[data-view="auth"] #authPanel .brand {
+  margin-bottom: 30px;
+}
+
+body[data-view="auth"] #authPanel .brand-mark {
+  color: #1e1914;
+  background: rgba(235, 211, 164, 0.88);
+}
+
+body[data-view="auth"] #authPanel h2 {
+  color: #f2dfb8;
+  font-size: clamp(34px, 4vw, 56px);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.34);
+}
+
+body[data-view="auth"] #authPanel p,
+body[data-view="auth"] #authPanel .field,
+body[data-view="auth"] #authPanel .status {
+  color: rgba(236, 222, 195, 0.78);
+}
+
+body[data-view="auth"] #authPanel input {
+  color: #f5ead0;
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(238, 221, 184, 0.24);
+}
+
+body[data-view="auth"] #authPanel input::placeholder {
+  color: rgba(236, 222, 195, 0.48);
+}
+
+body[data-view="auth"] #authPanel input:focus {
+  border-color: rgba(242, 223, 184, 0.62);
+  background: rgba(0, 0, 0, 0.28);
+  transform: translateY(-1px);
+}
+
+body[data-view="auth"] #authPanel button {
+  color: #201915;
+  background: #dfbf82;
+}
+
+body[data-view="auth"] #authPanel button:hover {
+  background: #f0d39a;
+}
+
+body[data-view="auth"] #authPanel button.secondary {
+  color: #f0dfbd;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(238, 221, 184, 0.3);
+}
+
+body[data-view="setup"] {
+  background: #11130f;
+}
+
+body[data-view="setup"] .app-shell {
+  width: 100%;
+  padding: 0;
+}
+
+body[data-view="setup"] .page-frame {
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #10120f;
+}
+
+body[data-view="setup"] .page-frame::before {
+  display: none;
+}
+
+body[data-view="setup"] .frame-nav {
+  min-height: 72px;
+  color: #f3eadb;
+  border-bottom-color: rgba(255, 255, 255, 0.14);
+  background: rgba(12, 14, 11, 0.74);
+  backdrop-filter: blur(14px);
+}
+
+body[data-view="setup"] .nav-links {
+  color: rgba(243, 234, 219, 0.68);
+}
+
+body[data-view="setup"] .menu-button.secondary {
+  color: #f3eadb;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+body[data-view="setup"] .hero-layout {
+  min-height: calc(100vh - 72px);
+  display: block;
+  padding: 0;
+}
+
+body[data-view="setup"] .hero-copy,
+body[data-view="setup"] .hero-visual {
+  display: none;
+}
+
+body[data-view="setup"] #setupPanel {
+  width: 100%;
+  max-width: none;
+  height: calc(100vh - 72px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: hidden;
+}
+
+body[data-view="setup"] #setupPanel .account-bar {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 24px;
+  z-index: 10;
+  color: rgba(243, 234, 219, 0.82);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(13, 16, 13, 0.48);
+  backdrop-filter: blur(16px);
+}
+
+body[data-view="setup"] #setupPanel .account-bar strong {
+  color: #fff;
+}
+
+body[data-view="setup"] #setupPanel .account-bar button.secondary {
+  color: #f3eadb;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.game-select-field {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+body[data-view="setup"] .room-form {
+  height: 100%;
+  display: block;
+}
+
+.game-split-selector {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  background: #10120f;
+}
+
+.game-slice {
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  color: #fff;
+  background: #22261f;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
+  margin-left: -3.4vw;
+  transform: none;
+  transition: flex 0.42s ease, filter 0.42s ease, transform 0.42s ease;
+}
+
+.game-slice:first-child {
+  margin-left: 0;
+}
+
+.game-slice img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.92) contrast(1.04) brightness(0.8);
+  transform: scale(1.08);
+  transition: transform 0.68s ease, filter 0.42s ease;
+}
+
+.game-slice::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62)),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.28), transparent 42%, rgba(0, 0, 0, 0.2));
+}
+
+.game-slice::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.game-slice.empty {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(180deg, #2b3029, #131612);
+}
+
+.game-slice.empty::before {
+  background:
+    linear-gradient(180deg, rgba(64, 90, 70, 0.16), rgba(0, 0, 0, 0.62)),
+    repeating-linear-gradient(90deg, transparent 0 34px, rgba(255, 255, 255, 0.035) 34px 35px);
+}
+
+.game-slice:hover,
+.game-slice.active {
+  flex: 1.34;
+  filter: brightness(1.05);
+}
+
+.game-slice:hover img,
+.game-slice.active img {
+  filter: saturate(1.04) contrast(1.06) brightness(0.92);
+  transform: translate3d(var(--move-x), var(--move-y), 0) scale(1.13);
+}
+
+.slice-index,
+.game-slice strong {
+  position: relative;
+  z-index: 3;
+  margin-left: clamp(26px, 4vw, 66px);
+  margin-right: 24px;
+  text-align: left;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.46);
+}
+
+.slice-index {
+  margin-bottom: 14px;
+  color: rgba(255, 235, 198, 0.72);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+}
+
+.game-slice strong {
+  margin-bottom: clamp(110px, 16vh, 178px);
+  max-width: 250px;
+  font-family: "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 3.6vw, 58px);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 0.94;
+}
+
+.room-control-bar {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 24px;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(180px, 300px) 150px;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(13, 16, 13, 0.58);
+  backdrop-filter: blur(18px);
+}
+
+.room-control-bar .field {
+  color: rgba(243, 234, 219, 0.74);
+}
+
+.room-control-bar input {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.room-control-bar input::placeholder {
+  color: rgba(243, 234, 219, 0.5);
+}
+
+.room-control-bar button.secondary {
+  color: #f3eadb;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+body[data-view="setup"] #setupStatus {
+  position: absolute;
+  left: 48px;
+  bottom: 112px;
+  z-index: 11;
+  color: rgba(243, 234, 219, 0.78);
+}
+
 .lobby-panel {
   width: calc(100% - 56px);
   margin: 30px auto;
@@ -1152,5 +1547,80 @@ body[data-view="lobby"] .hero-layout {
 
   .chat-form {
     grid-template-columns: 1fr;
+  }
+
+  body[data-view="auth"] .frame-nav,
+  body[data-view="setup"] .frame-nav {
+    min-height: 62px;
+  }
+
+  body[data-view="auth"] #authPanel {
+    left: 16px;
+    right: 16px;
+    top: 92px;
+    width: auto;
+    min-height: 0;
+    padding: 22px;
+  }
+
+  body[data-view="auth"] #authPanel h2 {
+    font-size: 38px;
+  }
+
+  body[data-view="setup"] #setupPanel {
+    height: auto;
+    min-height: calc(100vh - 62px);
+    overflow: visible;
+  }
+
+  body[data-view="setup"] #setupPanel .account-bar {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    margin: 12px;
+  }
+
+  .game-split-selector {
+    height: auto;
+    min-height: 760px;
+    flex-direction: column;
+  }
+
+  .game-slice {
+    min-height: 150px;
+    margin-left: 0;
+    clip-path: polygon(0 8%, 100% 0, 100% 92%, 0 100%);
+  }
+
+  .game-slice:hover,
+  .game-slice.active {
+    flex: 1.15;
+  }
+
+  .slice-index,
+  .game-slice strong {
+    margin-left: 24px;
+  }
+
+  .game-slice strong {
+    margin-bottom: 24px;
+    font-size: 34px;
+  }
+
+  .room-control-bar {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  body[data-view="setup"] #setupStatus {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    margin: 12px 18px 20px;
   }
 }
