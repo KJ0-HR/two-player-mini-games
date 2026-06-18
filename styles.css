@@ -1,14 +1,19 @@
 :root {
   color-scheme: light;
-  --bg: #f4f7f8;
-  --panel: #ffffff;
-  --ink: #1b2630;
-  --muted: #60717f;
-  --line: #dbe4e8;
-  --accent: #167a75;
-  --accent-strong: #0f5e5a;
+  --bg: #eef4f6;
+  --panel: rgba(255, 255, 255, 0.88);
+  --ink: #101820;
+  --muted: #5e7280;
+  --line: rgba(143, 164, 175, 0.34);
+  --accent: #0f8f88;
+  --accent-strong: #0a6764;
+  --accent-hot: #e15b3f;
+  --accent-gold: #c7923d;
   --warn: #b05718;
-  --shadow: 0 18px 60px rgba(27, 38, 48, 0.12);
+  --shadow: 0 24px 80px rgba(16, 24, 32, 0.18);
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --scroll-shift: 0px;
 }
 
 * {
@@ -20,10 +25,89 @@ body {
   margin: 0;
   font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
   color: var(--ink);
+  overflow-x: hidden;
+  background: var(--bg);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -4;
   background:
-    linear-gradient(135deg, rgba(22, 122, 117, 0.14), transparent 38%),
-    linear-gradient(315deg, rgba(176, 87, 24, 0.12), transparent 42%),
-    var(--bg);
+    linear-gradient(115deg, rgba(15, 143, 136, 0.22), transparent 31%),
+    linear-gradient(300deg, rgba(225, 91, 63, 0.16), transparent 34%),
+    linear-gradient(180deg, #f7fbfc 0%, #edf4f6 48%, #f6f1ea 100%);
+}
+
+.scene-layers {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.scene-grid {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.62;
+  transform: translate3d(0, calc(var(--scroll-shift) * -0.18), 0);
+  background:
+    linear-gradient(90deg, rgba(16, 24, 32, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(16, 24, 32, 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(115deg, transparent 0%, #000 18%, #000 72%, transparent 100%);
+}
+
+.scene-beam {
+  position: absolute;
+  width: 82vw;
+  height: 22vh;
+  border: 1px solid rgba(15, 143, 136, 0.18);
+  background: linear-gradient(90deg, transparent, rgba(15, 143, 136, 0.13), rgba(225, 91, 63, 0.08), transparent);
+  filter: blur(0.2px);
+  transform: rotate(-18deg);
+  animation: beamDrift 12s ease-in-out infinite alternate;
+}
+
+.beam-a {
+  top: 8vh;
+  left: -18vw;
+}
+
+.beam-b {
+  right: -24vw;
+  bottom: 10vh;
+  animation-delay: -5s;
+}
+
+.scene-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.36), transparent 26%),
+    repeating-linear-gradient(0deg, transparent 0 8px, rgba(16, 24, 32, 0.025) 8px 9px);
+}
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 3px;
+  background: transparent;
+}
+
+.scroll-progress span {
+  display: block;
+  width: var(--scroll-progress, 0%);
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hot), var(--accent-gold));
+  box-shadow: 0 0 18px rgba(15, 143, 136, 0.48);
+  transition: width 0.12s ease-out;
 }
 
 button,
@@ -38,14 +122,35 @@ button {
   border-radius: 8px;
   padding: 0 18px;
   color: #fff;
-  background: var(--accent);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 32%),
+    linear-gradient(135deg, var(--accent), var(--accent-strong));
   cursor: pointer;
-  transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+  box-shadow: 0 12px 30px rgba(15, 143, 136, 0.18);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+}
+
+button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+  transition: transform 0.48s ease;
 }
 
 button:hover {
-  background: var(--accent-strong);
-  transform: translateY(-1px);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 32%),
+    linear-gradient(135deg, #11a39a, var(--accent-strong));
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px rgba(15, 143, 136, 0.26);
+}
+
+button:hover::after {
+  transform: translateX(120%);
 }
 
 button:disabled {
@@ -56,8 +161,9 @@ button:disabled {
 
 button.secondary {
   color: var(--ink);
-  background: #edf3f4;
+  background: rgba(237, 245, 246, 0.76);
   border: 1px solid var(--line);
+  box-shadow: 0 10px 26px rgba(16, 24, 32, 0.08);
 }
 
 button.secondary:hover {
@@ -70,21 +176,41 @@ button.secondary:hover {
   margin: 0 auto;
   display: grid;
   align-items: center;
-  padding: 32px 0;
+  padding: 42px 0;
+  perspective: 1200px;
 }
 
 .panel {
   width: 100%;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(219, 228, 232, 0.88);
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: 8px;
   box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+  position: relative;
+  overflow: hidden;
+  animation: panelIn 0.58s cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.82), transparent 31%),
+    linear-gradient(145deg, transparent 0%, rgba(15, 143, 136, 0.06) 48%, transparent 74%);
+}
+
+.panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .setup-panel {
   max-width: 560px;
   margin: 0 auto;
-  padding: 28px;
+  padding: 30px;
 }
 
 .brand {
@@ -102,9 +228,21 @@ button.secondary:hover {
   flex: 0 0 auto;
   border-radius: 8px;
   color: #fff;
-  background: var(--ink);
+  background:
+    linear-gradient(135deg, #111820, #223240),
+    var(--ink);
   font-weight: 800;
   letter-spacing: 0;
+  box-shadow: 0 16px 36px rgba(16, 24, 32, 0.26);
+  position: relative;
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
 }
 
 h1,
@@ -155,14 +293,18 @@ select {
   border-radius: 8px;
   padding: 0 12px;
   color: var(--ink);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.84);
   outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
 }
 
 input:focus,
 select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(22, 122, 117, 0.12);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(15, 143, 136, 0.13), 0 12px 32px rgba(16, 24, 32, 0.08);
+  transform: translateY(-1px);
 }
 
 .copy-row,
@@ -198,7 +340,19 @@ select:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
-  background: #fbfcfc;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(241, 248, 248, 0.72));
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.host-box:hover,
+.join-box:hover,
+.account-bar:hover,
+.players:hover,
+.game-placeholder:hover {
+  transform: translateY(-2px);
+  border-color: rgba(15, 143, 136, 0.34);
+  box-shadow: 0 18px 46px rgba(16, 24, 32, 0.08);
 }
 
 .account-bar {
@@ -211,7 +365,9 @@ select:focus {
   border-radius: 8px;
   padding: 12px 14px;
   color: var(--muted);
-  background: #fbfcfc;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(241, 248, 248, 0.72));
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .account-profile,
@@ -244,8 +400,9 @@ select:focus {
   overflow: hidden;
   border-radius: 50%;
   color: #fff;
-  background: var(--ink);
+  background: linear-gradient(135deg, #111820, #263849);
   font-weight: 800;
+  box-shadow: 0 10px 24px rgba(16, 24, 32, 0.18);
 }
 
 .avatar-preview img,
@@ -312,7 +469,9 @@ select:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px;
-  background: #fbfcfc;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(241, 248, 248, 0.74));
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .player-list {
@@ -330,7 +489,16 @@ select:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 8px 24px rgba(16, 24, 32, 0.06);
+  animation: itemIn 0.36s ease both;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.player-card:hover {
+  transform: translateX(3px);
+  border-color: rgba(15, 143, 136, 0.32);
+  box-shadow: 0 14px 34px rgba(16, 24, 32, 0.1);
 }
 
 .player-card .badge {
@@ -374,12 +542,25 @@ select:focus {
   margin-top: 16px;
   display: grid;
   place-items: center;
-  border: 1px dashed #b9c9cf;
+  border: 1px solid rgba(143, 164, 175, 0.34);
   border-radius: 8px;
   background:
-    linear-gradient(90deg, rgba(27, 38, 48, 0.035) 1px, transparent 1px),
-    linear-gradient(rgba(27, 38, 48, 0.035) 1px, transparent 1px);
-  background-size: 28px 28px;
+    linear-gradient(90deg, rgba(15, 143, 136, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(16, 24, 32, 0.055) 1px, transparent 1px),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(239, 246, 247, 0.56));
+  background-size: 30px 30px, 30px 30px, auto;
+  background-position: 0 var(--scroll-shift), 0 var(--scroll-shift), 0 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.46) 45%, transparent 58%);
+  transform: translateX(-115%);
+  animation: stageSweep 7s ease-in-out infinite;
 }
 
 .stage-card {
@@ -389,8 +570,10 @@ select:focus {
   padding: 18px;
   border-radius: 8px;
   text-align: center;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--line);
+  box-shadow: 0 18px 46px rgba(16, 24, 32, 0.1);
+  animation: itemIn 0.36s ease both;
 }
 
 .math-game {
@@ -399,8 +582,30 @@ select:focus {
   gap: 16px;
   padding: 22px;
   border-radius: 8px;
-  background: #fff;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(241, 248, 248, 0.86));
   border: 1px solid var(--line);
+  box-shadow: 0 22px 60px rgba(16, 24, 32, 0.12);
+  animation: itemIn 0.34s ease both;
+  position: relative;
+  overflow: hidden;
+}
+
+.math-game::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(15, 143, 136, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(15, 143, 136, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(130deg, #000 0%, transparent 62%);
+}
+
+.math-game > * {
+  position: relative;
+  z-index: 1;
 }
 
 .math-topline {
@@ -417,7 +622,9 @@ select:focus {
   padding: 7px 10px;
   color: #fff;
   text-align: center;
-  background: var(--ink);
+  background: linear-gradient(135deg, #111820, #263849);
+  box-shadow: 0 10px 26px rgba(16, 24, 32, 0.2);
+  animation: timerPulse 1.2s ease-in-out infinite;
 }
 
 .math-label {
@@ -429,6 +636,7 @@ select:focus {
 .math-game h3 {
   font-size: 28px;
   line-height: 1.35;
+  padding: 4px 0;
 }
 
 .answer-row {
@@ -460,8 +668,11 @@ select:focus {
   gap: 14px;
   padding: 16px;
   border-radius: 8px;
-  background: #fff;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(241, 248, 248, 0.84));
   border: 1px solid var(--line);
+  box-shadow: 0 22px 60px rgba(16, 24, 32, 0.12);
+  animation: itemIn 0.34s ease both;
 }
 
 .gomoku-topline {
@@ -483,7 +694,15 @@ select:focus {
   grid-template-columns: repeat(25, 1fr);
   grid-template-rows: repeat(25, 1fr);
   border: 2px solid #8b6b3d;
-  background: #d8ad6a;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 38%),
+    linear-gradient(315deg, rgba(82, 49, 16, 0.12), transparent 42%),
+    #d8ad6a;
+  box-shadow:
+    inset 0 0 0 5px rgba(255, 255, 255, 0.12),
+    inset 0 0 42px rgba(82, 49, 16, 0.16),
+    0 24px 52px rgba(82, 49, 16, 0.22);
+  transform: translateZ(0);
 }
 
 .gomoku-arena {
@@ -507,14 +726,18 @@ select:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
-  background: #fbfcfc;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(239, 246, 247, 0.76));
   text-align: center;
   position: relative;
+  box-shadow: 0 14px 36px rgba(16, 24, 32, 0.08);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .gomoku-player-panel.active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(22, 122, 117, 0.12);
+  box-shadow: 0 0 0 3px rgba(15, 143, 136, 0.14), 0 18px 46px rgba(15, 143, 136, 0.12);
+  transform: translateY(-2px);
 }
 
 .gomoku-player-panel.empty {
@@ -535,9 +758,10 @@ select:focus {
   overflow: hidden;
   border-radius: 50%;
   color: #fff;
-  background: var(--ink);
+  background: linear-gradient(135deg, #111820, #263849);
   font-weight: 800;
   font-size: 24px;
+  box-shadow: 0 14px 32px rgba(16, 24, 32, 0.2);
 }
 
 .gomoku-avatar img {
@@ -581,6 +805,7 @@ select:focus {
   box-shadow: 0 8px 18px rgba(27, 38, 48, 0.08);
   overflow-wrap: anywhere;
   font-size: 14px;
+  animation: bubblePop 0.22s ease both;
 }
 
 .remote-camera {
@@ -636,7 +861,7 @@ select:focus {
 }
 
 .gomoku-cell:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
   transform: none;
 }
 
@@ -648,9 +873,10 @@ select:focus {
   width: 82%;
   height: 82%;
   border-radius: 50%;
-  box-shadow: 0 2px 5px rgba(27, 38, 48, 0.26);
+  box-shadow: 0 3px 8px rgba(27, 38, 48, 0.3);
   position: relative;
   z-index: 1;
+  animation: stoneDrop 0.18s ease both;
 }
 
 .stone.black {
@@ -673,7 +899,9 @@ select:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
-  background: #fbfcfc;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(241, 248, 248, 0.74));
+  animation: itemIn 0.28s ease both;
 }
 
 .chat-form {
@@ -714,7 +942,10 @@ select:focus {
   padding: 16px;
   color: #fff;
   text-align: center;
-  background: #101820;
+  background:
+    linear-gradient(145deg, #101820, #1e2c36);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.32);
+  animation: itemIn 0.24s ease both;
 }
 
 .camera-card video {
@@ -731,6 +962,91 @@ select:focus {
 
 .lobby-actions {
   margin-top: 18px;
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) rotateX(2deg) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateX(0) scale(1);
+  }
+}
+
+@keyframes itemIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes beamDrift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(-18deg);
+  }
+  to {
+    transform: translate3d(8vw, 4vh, 0) rotate(-16deg);
+  }
+}
+
+@keyframes stageSweep {
+  0%,
+  46% {
+    transform: translateX(-115%);
+  }
+  68%,
+  100% {
+    transform: translateX(115%);
+  }
+}
+
+@keyframes timerPulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 26px rgba(16, 24, 32, 0.2);
+  }
+  50% {
+    box-shadow: 0 10px 30px rgba(225, 91, 63, 0.26);
+  }
+}
+
+@keyframes bubblePop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes stoneDrop {
+  from {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (max-width: 760px) {

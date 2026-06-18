@@ -8,6 +8,7 @@ const gameNames = {
 
 const params = new URLSearchParams(location.search);
 const storedAccount = JSON.parse(sessionStorage.getItem("twoPlayer.account") || "null");
+const rootStyle = document.documentElement.style;
 
 const state = {
   account: storedAccount,
@@ -63,6 +64,20 @@ function setStatus(target, message, isError = false) {
   target.style.color = isError ? "#a43e27" : "";
 }
 
+function updateVisualMotion() {
+  const scrollTop = window.scrollY || document.documentElement.scrollTop;
+  const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  rootStyle.setProperty("--scroll-shift", `${scrollTop}px`);
+  rootStyle.setProperty("--scroll-progress", `${Math.min(100, (scrollTop / maxScroll) * 100)}%`);
+}
+
+window.addEventListener("scroll", updateVisualMotion, { passive: true });
+window.addEventListener("resize", updateVisualMotion);
+window.addEventListener("pointermove", (event) => {
+  rootStyle.setProperty("--pointer-x", `${Math.round((event.clientX / window.innerWidth) * 100)}%`);
+  rootStyle.setProperty("--pointer-y", `${Math.round((event.clientY / window.innerHeight) * 100)}%`);
+}, { passive: true });
+
 function api(path, options = {}) {
   return fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -94,18 +109,22 @@ function getPlayerAvatar() {
 }
 
 function showAuth() {
+  document.body.dataset.view = "auth";
   authPanel.classList.remove("hidden");
   setupPanel.classList.add("hidden");
   lobbyPanel.classList.add("hidden");
   accountPassword.value = "";
+  updateVisualMotion();
 }
 
 function showSetup() {
+  document.body.dataset.view = "setup";
   authPanel.classList.add("hidden");
   setupPanel.classList.remove("hidden");
   lobbyPanel.classList.add("hidden");
   accountLabel.textContent = state.account.id;
   renderAvatar(accountAvatar, state.account.id, state.account.avatar);
+  updateVisualMotion();
 }
 
 function setAccount(account) {
@@ -154,11 +173,13 @@ function openLobby(room) {
 
   setupPanel.classList.add("hidden");
   lobbyPanel.classList.remove("hidden");
+  document.body.dataset.view = "lobby";
   activeRoomCode.textContent = room.roomCode;
   activeGameName.textContent = gameNames[room.gameId] || `游戏 ${room.gameId}`;
   inviteLink.value = `${location.origin}${location.pathname}?room=${room.roomCode}&game=${room.gameId}&guest=1`;
   renderRoom(room);
   connectEvents();
+  updateVisualMotion();
 }
 
 function renderRoom(room) {
@@ -883,3 +904,5 @@ if (state.account) {
 } else {
   showAuth();
 }
+
+updateVisualMotion();
