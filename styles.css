@@ -18,6 +18,141 @@
   --move-y: 0px;
 }
 
+/* Full-screen static Gomoku scene override */
+body[data-view="lobby"][data-game="2"] {
+  overflow: hidden;
+  background: #090806;
+}
+
+body[data-view="lobby"][data-game="2"] .page-shell {
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+body[data-view="lobby"][data-game="2"] .frame-nav,
+body[data-view="lobby"][data-game="2"] .copy-row,
+body[data-view="lobby"][data-game="2"] .game-placeholder > h3,
+body[data-view="lobby"][data-game="2"] #lobbyStatus {
+  display: none;
+}
+
+body[data-view="lobby"][data-game="2"] .lobby-header {
+  position: fixed;
+  inset: 0 0 auto auto;
+  z-index: 20;
+  display: block;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body[data-view="lobby"][data-game="2"] .lobby-header > div {
+  display: none;
+}
+
+body[data-view="lobby"][data-game="2"] .lobby-panel {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+body[data-view="lobby"][data-game="2"] .lobby-grid,
+body[data-view="lobby"][data-game="2"] .game-placeholder,
+body[data-view="lobby"][data-game="2"] .stage.gomoku-stage,
+body[data-view="lobby"][data-game="2"] .stage.gomoku-stage .gomoku-game {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body[data-view="lobby"][data-game="2"] .stage.gomoku-stage .gomoku-game {
+  background:
+    linear-gradient(180deg, rgba(8, 7, 6, 0.08), rgba(8, 7, 6, 0.22)),
+    url("./assets/gomoku-scene-bg.png") center center / cover no-repeat;
+}
+
+body[data-view="lobby"][data-game="2"] .stage.gomoku-stage .gomoku-game::before,
+body[data-view="lobby"][data-game="2"] .stage.gomoku-stage .gomoku-game::after {
+  display: none;
+  animation: none;
+  transform: none;
+}
+
+body[data-view="lobby"][data-game="2"] .stage.gomoku-stage .gomoku-board {
+  transform: none;
+  transition: none;
+}
+
+body[data-view="lobby"][data-game="2"] .lobby-actions {
+  position: fixed;
+  left: 22px;
+  bottom: 22px;
+  z-index: 20;
+  width: 260px;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+body[data-view="lobby"][data-game="2"] .lobby-actions button {
+  min-height: 42px;
+  padding: 0 12px;
+  color: #f4e3c1;
+  background: rgba(20, 14, 9, 0.62);
+  border-color: rgba(232, 203, 139, 0.36);
+  backdrop-filter: blur(8px);
+}
+
+body[data-view="lobby"][data-game="2"] #leaveRoom {
+  position: fixed;
+  right: 22px;
+  top: 22px;
+  z-index: 20;
+  width: 74px;
+  height: 42px;
+  padding: 0;
+  opacity: 1;
+  color: #f4e3c1;
+  background: rgba(20, 14, 9, 0.62);
+  border-color: rgba(232, 203, 139, 0.36);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 980px) {
+  body[data-view="lobby"][data-game="2"] {
+    overflow: auto;
+  }
+
+  body[data-view="lobby"][data-game="2"] .lobby-panel,
+  body[data-view="lobby"][data-game="2"] .lobby-grid,
+  body[data-view="lobby"][data-game="2"] .game-placeholder,
+  body[data-view="lobby"][data-game="2"] .stage.gomoku-stage,
+  body[data-view="lobby"][data-game="2"] .stage.gomoku-stage .gomoku-game {
+    min-height: 100vh;
+  }
+}
+
 /* Refined math notation for Game 1 */
 .math-expression {
   display: inline-block;
