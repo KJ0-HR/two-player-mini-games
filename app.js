@@ -22,6 +22,7 @@ const state = {
   cameraStream: null,
   transientTimer: null,
   lastRoom: null,
+  lastGomokuMoveCount: 0,
 };
 
 const authPanel = document.querySelector("#authPanel");
@@ -119,6 +120,7 @@ function getPlayerAvatar() {
 
 function showAuth() {
   document.body.dataset.view = "auth";
+  document.body.dataset.game = "";
   authPanel.classList.remove("hidden");
   setupPanel.classList.add("hidden");
   lobbyPanel.classList.add("hidden");
@@ -128,6 +130,7 @@ function showAuth() {
 
 function showSetup() {
   document.body.dataset.view = "setup";
+  document.body.dataset.game = "";
   authPanel.classList.add("hidden");
   setupPanel.classList.remove("hidden");
   lobbyPanel.classList.add("hidden");
@@ -195,11 +198,14 @@ function openLobby(room) {
 function renderRoom(room) {
   state.lastRoom = room;
   state.gameId = room.gameId;
+  document.body.dataset.game = room.gameId;
+  gameStage.classList.toggle("gomoku-stage", room.gameId === "2");
   playerList.innerHTML = "";
 
   room.players.forEach((player, index) => {
     const score = room.game?.scores?.[player.id] || 0;
-    const detail = room.gameId === "2" ? `${index === 0 ? "黑棋" : "白棋"}${room.game?.currentPlayerId === player.id ? " · 当前回合" : ""}` : `${score} 分`;
+    const targetScore = room.game?.targetScore || 10;
+    const detail = room.gameId === "2" ? `${index === 0 ? "黑棋" : "白棋"}${room.game?.currentPlayerId === player.id ? " · 当前回合" : ""}` : `${score}/${targetScore} 分`;
     const badgeText = room.gameId === "2"
       ? room.game?.winnerId === player.id
         ? "获胜"
@@ -235,7 +241,8 @@ function renderRoom(room) {
   readyToggle.disabled = gameStarted;
   readyToggle.textContent = state.ready ? "取消准备" : "准备";
   startGame.disabled = !allReady || gameStarted || !["1", "2"].includes(room.gameId);
-  startGame.textContent = gameStarted ? "游戏进行中" : room.gameId === "2" && room.game?.status === "finished" ? "重新开始" : "开始游戏";
+  const gameFinished = room.game?.status === "finished";
+  startGame.textContent = gameStarted ? "游戏进行中" : gameFinished ? "重新开始" : "开始游戏";
   renderGameArea(room, allReady);
   scheduleTransientCleanup(room);
   setStatus(lobbyStatus, room.players.length < 2 ? `把房间号 ${room.roomCode} 告诉玩家二即可加入。` : "房间已满员，可以确认准备状态。");
@@ -301,6 +308,18 @@ function renderGameArea(room, allReady) {
     return;
   }
 
+  if (room.game.status === "finished") {
+    gameStage.innerHTML = `
+      <div class="math-game result-view">
+        <p class="math-label">本局结束</p>
+        <h3>${escapeHtml(room.game.lastResult?.message || "已分出胜负")}</h3>
+        <p>胜利条件：先得到 ${room.game.targetScore || 10} 分</p>
+        <p>最后一题答案：${formatAnswer(room.game.lastResult?.answer)}</p>
+      </div>
+    `;
+    return;
+  }
+
   const questionChanged = state.currentQuestionId !== room.game.question?.id;
   if (questionChanged) {
     state.currentQuestionId = room.game.question?.id;
@@ -311,7 +330,7 @@ function renderGameArea(room, allReady) {
           <strong id="roundTimer">01:00</strong>
         </div>
         <p class="math-label">第 ${room.game.round} 题</p>
-        <h3>${escapeHtml(room.game.question.text)}</h3>
+        <h3>${mathQuestionMarkup(room.game.question)}</h3>
         <div class="answer-row">
           <input id="answerInput" name="answer" autocomplete="off" inputmode="decimal" placeholder="填写答案" />
           <button type="submit">提交</button>
@@ -360,6 +379,10 @@ function formatAnswer(value) {
   return Number.isFinite(Number(value)) ? Number(value).toLocaleString("zh-CN", { maximumFractionDigits: 6 }) : "--";
 }
 
+function mathQuestionMarkup(question) {
+  return question?.html || escapeHtml(question?.text || "");
+}
+
 function renderGomokuArea(room, allReady) {
   if (!room.game || room.game.status === "lobby") {
     gameStage.innerHTML = `
@@ -378,6 +401,7 @@ function renderGomokuArea(room, allReady) {
   const leftPlayer = room.players[0];
   const rightPlayer = room.players[1];
 
+  state.lastGomokuMoveCount = room.game.moves?.length || 0;
   gameStage.innerHTML = `
     <div class="gomoku-game">
       <div class="gomoku-topline">
@@ -894,8 +918,14 @@ leaveRoom.addEventListener("click", async () => {
   clearTransientTimer();
   stopCameraStream();
   state.roomCode = "";
+  state.ready = false;
+  state.currentQuestionId = null;
+  state.lastGomokuMoveCount = 0;
+  document.body.dataset.game = "";
+  gameStage.classList.remove("gomoku-stage");
   lobbyPanel.classList.add("hidden");
-  setupPanel.classList.remove("hidden");
+  showSetup();
+  history.replaceState({}, "", `${location.origin}${location.pathname}`);
   setStatus(setupStatus, "已离开房间。");
 });
 

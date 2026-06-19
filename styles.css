@@ -18,6 +18,405 @@
   --move-y: 0px;
 }
 
+/* Refined math notation for Game 1 */
+.math-expression {
+  display: inline-block;
+  font-family: "Cambria Math", "Times New Roman", "Noto Serif SC", serif;
+  font-size: clamp(24px, 3vw, 40px);
+  line-height: 1.65;
+  letter-spacing: 0;
+}
+
+.math-expression sup,
+.math-expression sub {
+  line-height: 0;
+}
+
+.math-frac {
+  display: inline-grid;
+  grid-template-rows: auto auto;
+  min-width: 1.8em;
+  margin: 0 0.12em;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.05;
+}
+
+.math-frac span:first-child {
+  padding: 0 0.2em 0.12em;
+  border-bottom: 1.5px solid currentColor;
+}
+
+.math-frac span:last-child {
+  padding: 0.12em 0.2em 0;
+}
+
+.math-det {
+  display: inline-grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 0.08em 0.55em;
+  margin: 0 0.25em;
+  padding: 0.12em 0.55em;
+  border-left: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  vertical-align: middle;
+}
+
+.math-sign {
+  display: inline-block;
+  min-width: 0.75em;
+  text-align: center;
+}
+
+/* Cinematic Gomoku board. Uses the provided scene image as the real background. */
+body[data-game="2"] .lobby-panel {
+  width: min(1920px, calc(100% - 24px));
+}
+
+body[data-game="2"] .lobby-grid {
+  grid-template-columns: 1fr;
+}
+
+body[data-game="2"] .players {
+  display: none;
+}
+
+body[data-game="2"] .game-placeholder {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.stage.gomoku-stage {
+  min-height: clamp(660px, calc(100vh - 250px), 920px);
+  margin-top: 0;
+  border-radius: 18px;
+  background: transparent;
+  overflow: visible;
+}
+
+.stage.gomoku-stage .gomoku-game {
+  width: 100%;
+  min-height: clamp(660px, calc(100vh - 250px), 920px);
+  position: relative;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(244, 229, 198, 0.26);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(13, 12, 10, 0.18), rgba(13, 12, 10, 0.38)),
+    url("./assets/gomoku-scene-bg.png") center / cover no-repeat;
+  box-shadow: 0 30px 90px rgba(16, 13, 10, 0.28);
+  isolation: isolate;
+}
+
+.stage.gomoku-stage .gomoku-game::before {
+  content: "";
+  position: absolute;
+  inset: -2%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 26%, rgba(255, 229, 184, 0.18), transparent 18%),
+    radial-gradient(circle at 76% 18%, rgba(255, 237, 197, 0.14), transparent 22%);
+  transform: translate3d(calc(var(--move-x) * -0.35), calc(var(--move-y) * -0.35), 0);
+  transition: transform 0.28s ease-out;
+}
+
+.stage.gomoku-stage .gomoku-game::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image:
+    radial-gradient(ellipse at center, rgba(255, 206, 182, 0.92) 0 28%, transparent 30%),
+    radial-gradient(ellipse at center, rgba(255, 214, 190, 0.82) 0 28%, transparent 30%),
+    radial-gradient(ellipse at center, rgba(255, 234, 211, 0.74) 0 25%, transparent 28%);
+  background-size: 34px 22px, 26px 18px, 20px 14px;
+  background-position: 8% 86%, 58% 94%, 91% 22%;
+  animation: gomokuPetals 16s linear infinite;
+}
+
+.stage.gomoku-stage .gomoku-topline,
+.stage.gomoku-stage .gomoku-message,
+.stage.gomoku-stage .undo-panel,
+.stage.gomoku-stage .chat-form {
+  position: absolute;
+  z-index: 5;
+}
+
+.stage.gomoku-stage .gomoku-topline {
+  top: 18px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  color: #f8ead0;
+  border: 1px solid rgba(242, 223, 184, 0.22);
+  border-radius: 14px;
+  background: rgba(16, 13, 10, 0.48);
+  backdrop-filter: blur(10px);
+}
+
+.stage.gomoku-stage .math-label,
+.stage.gomoku-stage .gomoku-topline h3,
+.stage.gomoku-stage .gomoku-message {
+  color: #f8ead0;
+}
+
+.stage.gomoku-stage .gomoku-topline .secondary {
+  color: #241b12;
+  background: rgba(232, 203, 139, 0.9);
+}
+
+.stage.gomoku-stage .gomoku-arena {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+}
+
+.stage.gomoku-stage .gomoku-board-wrap {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  z-index: 3;
+  width: min(34vw, 58vh, 620px);
+  min-width: 430px;
+  transform: translateX(-50%);
+}
+
+.stage.gomoku-stage .gomoku-board {
+  width: 100%;
+  border: 2px solid rgba(58, 36, 18, 0.86);
+  background:
+    linear-gradient(135deg, rgba(199, 148, 84, 0.94), rgba(235, 186, 113, 0.88)),
+    repeating-linear-gradient(90deg, transparent 0 20px, rgba(77, 49, 24, 0.08) 20px 21px);
+  box-shadow:
+    0 26px 60px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 8px rgba(114, 71, 31, 0.16);
+  transform: translate3d(calc(var(--move-x) * 0.08), calc(var(--move-y) * 0.08), 0);
+  transition: transform 0.25s ease-out;
+}
+
+.stage.gomoku-stage .gomoku-player-panel {
+  position: absolute;
+  top: 14%;
+  bottom: 11%;
+  z-index: 4;
+  width: min(20vw, 350px);
+  min-width: 250px;
+  min-height: 0;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #f8ead0;
+}
+
+.stage.gomoku-stage .gomoku-player-panel.left {
+  left: 5.6%;
+}
+
+.stage.gomoku-stage .gomoku-player-panel.right {
+  right: 5.6%;
+}
+
+.stage.gomoku-stage .gomoku-avatar-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  transform: translateX(-50%);
+  border: 1px solid rgba(232, 203, 139, 0.42);
+  border-radius: 20px;
+  background: rgba(28, 20, 12, 0.62);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(8px);
+}
+
+.stage.gomoku-stage .gomoku-avatar {
+  width: 96px;
+  height: 96px;
+  border: 2px solid rgba(245, 226, 184, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.26);
+}
+
+.stage.gomoku-stage .stone-label {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+}
+
+.stage.gomoku-stage .gomoku-player-panel > strong {
+  position: absolute;
+  left: 50%;
+  bottom: 158px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+
+.stage.gomoku-stage .bubble-stack {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(100%, 330px);
+  min-height: 120px;
+  transform: translateX(-50%);
+  align-content: center;
+  justify-items: center;
+  padding: 12px;
+  border: 1px solid rgba(232, 203, 139, 0.28);
+  border-radius: 18px;
+  background: rgba(8, 7, 6, 0.72);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.stage.gomoku-stage .chat-bubble {
+  max-width: 300px;
+  padding: 16px 18px;
+  color: #1d160e;
+  border: 1px solid rgba(255, 235, 191, 0.68);
+  border-radius: 18px;
+  background: rgba(255, 241, 205, 0.94);
+  font-size: clamp(18px, 1.35vw, 25px);
+  line-height: 1.45;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.stage.gomoku-stage .gomoku-message {
+  left: 50%;
+  bottom: 82px;
+  width: min(520px, calc(100% - 40px));
+  margin: 0;
+  padding: 10px 14px;
+  text-align: center;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(16, 13, 10, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.stage.gomoku-stage .chat-form {
+  left: 50%;
+  bottom: 18px;
+  width: min(640px, calc(100% - 40px));
+  transform: translateX(-50%);
+  padding: 10px;
+  border: 1px solid rgba(242, 223, 184, 0.22);
+  border-radius: 14px;
+  background: rgba(16, 13, 10, 0.48);
+  backdrop-filter: blur(10px);
+}
+
+.stage.gomoku-stage .undo-panel {
+  right: 22px;
+  bottom: 92px;
+  width: min(360px, calc(100% - 44px));
+  color: #f8ead0;
+  border-color: rgba(242, 223, 184, 0.22);
+  background: rgba(16, 13, 10, 0.58);
+  backdrop-filter: blur(10px);
+}
+
+.stage.gomoku-stage .remote-camera {
+  position: absolute;
+  left: 50%;
+  bottom: 176px;
+  width: 210px;
+  transform: translateX(-50%);
+  color: #f8ead0;
+}
+
+.stone.new-stone {
+  animation: none;
+}
+
+@keyframes gomokuPetals {
+  0% {
+    background-position: 8% 104%, 58% 112%, 91% 42%;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  100% {
+    background-position: 15% -10%, 63% -8%, 84% 110%;
+    transform: translate3d(18px, -12px, 0) rotate(2deg);
+  }
+}
+
+@media (max-width: 980px) {
+  .stage.gomoku-stage,
+  .stage.gomoku-stage .gomoku-game {
+    min-height: 980px;
+  }
+
+  .stage.gomoku-stage .gomoku-topline {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    margin: 12px;
+  }
+
+  .stage.gomoku-stage .gomoku-board-wrap {
+    top: 132px;
+    width: min(88vw, 520px);
+    min-width: 0;
+  }
+
+  .stage.gomoku-stage .gomoku-player-panel {
+    top: 690px;
+    bottom: auto;
+    width: min(42vw, 320px);
+    min-width: 0;
+    height: 230px;
+  }
+
+  .stage.gomoku-stage .gomoku-player-panel.left {
+    left: 4vw;
+  }
+
+  .stage.gomoku-stage .gomoku-player-panel.right {
+    right: 4vw;
+  }
+
+  .stage.gomoku-stage .gomoku-avatar-wrap {
+    width: 118px;
+    height: 118px;
+  }
+
+  .stage.gomoku-stage .gomoku-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .stage.gomoku-stage .gomoku-player-panel > strong {
+    bottom: 126px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stage.gomoku-stage .bubble-stack {
+    min-height: 86px;
+  }
+
+  .stage.gomoku-stage .chat-bubble {
+    font-size: 17px;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1143,7 +1542,7 @@ body[data-view="setup"] #setupStatus {
   gap: 14px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.78);
-  animation: fadeRise 0.34s ease both;
+  animation: none;
 }
 
 .gomoku-topline {
@@ -1232,21 +1631,23 @@ body[data-view="setup"] #setupStatus {
 
 .bubble-stack {
   width: 100%;
-  min-height: 38px;
+  min-height: 58px;
   display: grid;
   gap: 6px;
   justify-items: center;
 }
 
 .chat-bubble {
-  max-width: 150px;
+  max-width: 210px;
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 12px 14px;
   color: var(--ink);
   background: #fff;
   border: 1px solid var(--line);
   overflow-wrap: anywhere;
-  font-size: 14px;
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 700;
   animation: bubblePop 0.22s ease both;
 }
 
@@ -1318,7 +1719,10 @@ body[data-view="setup"] #setupStatus {
   box-shadow: 0 2px 5px rgba(27, 38, 48, 0.26);
   position: relative;
   z-index: 1;
-  animation: stoneDrop 0.18s ease both;
+}
+
+.stone.new-stone {
+  animation: stoneDrop 0.16s ease both;
 }
 
 .stone.black {

@@ -17,6 +17,7 @@ const port = Number(process.env.PORT || 5177);
 const rooms = new Map();
 const ROUND_MS = 60000;
 const NEXT_ROUND_DELAY_MS = 1600;
+const MATH_TARGET_SCORE = 10;
 const GOMOKU_SIZE = 25;
 const CHAT_BUBBLE_MS = 6000;
 const CAMERA_FRAME_MS = 1400;
@@ -26,6 +27,10 @@ const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
 };
 
 function sendJson(response, status, payload) {
@@ -293,10 +298,12 @@ function publicRoom(room) {
           ? {
               id: room.game.question.id,
               text: room.game.question.text,
+              html: room.game.question.html,
               level: room.game.question.level,
             }
           : null,
         scores: Object.fromEntries(room.players.map((player) => [player.id, room.game.scores[player.id] || 0])),
+        targetScore: room.game.targetScore || null,
         lastResult: room.game.lastResult,
         board: room.game.board || null,
         currentPlayerId: room.game.currentPlayerId || null,
@@ -431,84 +438,159 @@ function fractionText(numerator, denominator) {
   return d === 1 ? String(n) : `${n}/${d}`;
 }
 
+function signedTerm(value, variable = "") {
+  const sign = value >= 0 ? "+" : "−";
+  return `${sign} ${Math.abs(value)}${variable}`;
+}
+
+function signedTermHtml(value, variable = "") {
+  const sign = value >= 0 ? "+" : "−";
+  return `<span class="math-sign">${sign}</span> ${Math.abs(value)}${variable}`;
+}
+
+function fractionHtml(numerator, denominator) {
+  return `<span class="math-frac"><span>${numerator}</span><span>${denominator}</span></span>`;
+}
+
+function mathHtml(content) {
+  return `<span class="math-expression">${content}</span>`;
+}
+
 function generateMathQuestion(round) {
-  const templates = [
+  const advancedTemplates = [
     () => {
-      const a = randomInt(1, 20);
-      const b = randomInt(1, 20);
-      return { text: `${a} + ${b} = ?`, answer: a + b, level: "小学一年级" };
-    },
-    () => {
-      const a = randomInt(12, 50);
-      const b = randomInt(1, a);
-      return { text: `${a} - ${b} = ?`, answer: a - b, level: "小学一年级" };
-    },
-    () => {
-      const a = randomInt(2, 12);
-      const b = randomInt(2, 12);
-      return { text: `${a} × ${b} = ?`, answer: a * b, level: "小学二年级" };
-    },
-    () => {
-      const divisor = randomInt(2, 12);
-      const quotient = randomInt(2, 12);
-      return { text: `${divisor * quotient} ÷ ${divisor} = ?`, answer: quotient, level: "小学二年级" };
-    },
-    () => {
-      const a = randomInt(2, 18);
-      const b = randomInt(2, 18);
-      const c = randomInt(2, 8);
-      const d = randomInt(1, 30);
-      return { text: `(${a} + ${b}) × ${c} - ${d} = ?`, answer: (a + b) * c - d, level: "小学高年级" };
-    },
-    () => {
-      const denominator = choice([3, 4, 5, 6, 8, 10]);
-      const a = randomInt(1, denominator - 1);
-      const b = randomInt(1, denominator - 1);
-      return {
-        text: `${a}/${denominator} + ${b}/${denominator} = ?`,
-        answer: (a + b) / denominator,
-        level: "分数计算",
-        hint: `可填 ${fractionText(a + b, denominator)} 或小数`,
-      };
-    },
-    () => {
-      const x = randomInt(-9, 9);
-      const m = randomInt(2, 9);
-      const b = randomInt(-12, 12);
-      return { text: `解 x：${m}x ${b >= 0 ? "+" : "-"} ${Math.abs(b)} = ${m * x + b}`, answer: x, level: "初中方程" };
-    },
-    () => {
-      const n = randomInt(3, 15);
-      const a = randomInt(2, 8);
-      return { text: `√${n * n} + ${a}² = ?`, answer: n + a * a, level: "初中代数" };
-    },
-    () => {
-      const a = randomInt(1, 4);
-      const b = randomInt(-5, 5);
+      const a = randomInt(1, 5);
+      const b = randomInt(-6, 6);
       const c = randomInt(-8, 8);
       const x = randomInt(-3, 4);
       return {
-        text: `若 f(x) = ${a}x³ ${b >= 0 ? "+" : "-"} ${Math.abs(b)}x² ${c >= 0 ? "+" : "-"} ${Math.abs(c)}x，求 f'(${x})`,
+        text: `设 f(x) = ${a}x³ ${signedTerm(b, "x²")} ${signedTerm(c, "x")}，求 f′(${x}) = ?`,
+        html: mathHtml(`设 f(x) = ${a}x<sup>3</sup> ${signedTermHtml(b, "x<sup>2</sup>")} ${signedTermHtml(c, "x")}，求 f′(${x}) = ?`),
         answer: 3 * a * x * x + 2 * b * x + c,
         level: "高等数学：导数",
       };
     },
     () => {
-      const a = choice([2, 4, 6]);
-      const b = randomInt(-5, 8);
+      const a = choice([2, 4, 6, 8]);
+      const b = randomInt(-6, 8);
       const upper = randomInt(1, 6);
       return {
-        text: `计算 ∫₀^${upper} (${a}x ${b >= 0 ? "+" : "-"} ${Math.abs(b)}) dx`,
+        text: `计算定积分：∫₀^${upper} (${a}x ${signedTerm(b)}) dx = ?`,
+        html: mathHtml(`计算定积分：∫<sub>0</sub><sup>${upper}</sup> (${a}x ${signedTermHtml(b)}) dx = ?`),
         answer: roundAnswer((a * upper * upper) / 2 + b * upper),
         level: "高等数学：定积分",
       };
     },
+    () => {
+      const a = randomInt(1, 4);
+      const b = randomInt(-5, 5);
+      const upper = randomInt(1, 5);
+      return {
+        text: `计算定积分：∫₀^${upper} (${a}x² ${signedTerm(b, "x")}) dx = ?`,
+        html: mathHtml(`计算定积分：∫<sub>0</sub><sup>${upper}</sup> (${a}x<sup>2</sup> ${signedTermHtml(b, "x")}) dx = ?`),
+        answer: roundAnswer((a * upper ** 3) / 3 + (b * upper ** 2) / 2),
+        level: "高等数学：定积分",
+      };
+    },
+    () => {
+      const a = randomInt(1, 5);
+      const b = randomInt(-5, 5);
+      const x = randomInt(-3, 4);
+      return {
+        text: `设 F(x) = ${a}x⁴ ${signedTerm(b, "x²")}，求 F″(${x}) = ?`,
+        html: mathHtml(`设 F(x) = ${a}x<sup>4</sup> ${signedTermHtml(b, "x<sup>2</sup>")}，求 F″(${x}) = ?`),
+        answer: 12 * a * x * x + 2 * b,
+        level: "高等数学：二阶导数",
+      };
+    },
+    () => {
+      const a = randomInt(1, 5);
+      const b = randomInt(1, 6);
+      return {
+        text: `计算极限：limₓ→0 (sin(${a}x) / (${b}x)) = ?`,
+        html: mathHtml(`计算极限：lim<sub>x→0</sub> ${fractionHtml(`sin(${a}x)`, `${b}x`)} = ?`),
+        answer: roundAnswer(a / b),
+        level: "高等数学：极限",
+      };
+    },
+    () => {
+      const a = randomInt(1, 5);
+      const b = randomInt(1, 5);
+      return {
+        text: `计算极限：limₓ→0 ((1 + ${a}x)^(1/x))，结果为 e 的多少次方？`,
+        html: mathHtml(`计算极限：lim<sub>x→0</sub> (1 + ${a}x)<sup>1/x</sup>，结果为 e 的多少次方？`),
+        answer: a,
+        level: "高等数学：重要极限",
+      };
+    },
+    () => {
+      const a = randomInt(-5, 6);
+      const b = randomInt(-5, 6);
+      const c = randomInt(-5, 6);
+      const d = randomInt(-5, 6);
+      return {
+        text: `求二阶行列式：| ${a}  ${b};  ${c}  ${d} | = ?`,
+        html: mathHtml(`求二阶行列式：<span class="math-det"><span>${a}</span><span>${b}</span><span>${c}</span><span>${d}</span></span> = ?`),
+        answer: a * d - b * c,
+        level: "线性代数：行列式",
+      };
+    },
+    () => {
+      const a = randomInt(1, 6);
+      const d = randomInt(1, 6);
+      return {
+        text: `矩阵 A = diag(${a}, ${d})，求 tr(A) = ?`,
+        html: mathHtml(`矩阵 A = diag(${a}, ${d})，求 tr(A) = ?`),
+        answer: a + d,
+        level: "线性代数：矩阵迹",
+      };
+    },
+    () => {
+      const n = randomInt(2, 8);
+      return {
+        text: `级数 Σₖ₌₁^${n} k² = ?`,
+        html: mathHtml(`级数 ∑<sub>k=1</sub><sup>${n}</sup> k<sup>2</sup> = ?`),
+        answer: (n * (n + 1) * (2 * n + 1)) / 6,
+        level: "高等数学：级数",
+      };
+    },
+    () => {
+      const a = randomInt(2, 6);
+      const b = randomInt(2, 6);
+      return {
+        text: `设 z = ${a} + ${b}i，求 |z|² = ?`,
+        html: mathHtml(`设 z = ${a} + ${b}i，求 |z|<sup>2</sup> = ?`),
+        answer: a * a + b * b,
+        level: "复变函数：复数模",
+      };
+    },
+    () => {
+      const lambda = randomInt(2, 6);
+      const k = randomInt(1, 5);
+      return {
+        text: `求导：d/dx [${k}e^(${lambda}x)] 在 x = 0 处的值 = ?`,
+        html: mathHtml(`求导：${fractionHtml("d", "dx")} [${k}e<sup>${lambda}x</sup>] 在 x = 0 处的值 = ?`),
+        answer: k * lambda,
+        level: "高等数学：指数函数求导",
+      };
+    },
+    () => {
+      const a = randomInt(1, 5);
+      const b = randomInt(1, 5);
+      return {
+        text: `求偏导：设 f(x,y) = ${a}x²y + ${b}xy²，求 ∂f/∂x 在 (1,1) 处的值 = ?`,
+        html: mathHtml(`求偏导：设 f(x,y) = ${a}x<sup>2</sup>y + ${b}xy<sup>2</sup>，求 ${fractionHtml("∂f", "∂x")} 在 (1,1) 处的值 = ?`),
+        answer: 2 * a + b,
+        level: "高等数学：偏导数",
+      };
+    },
   ];
 
-  const question = choice(templates)();
+  const question = choice(advancedTemplates)();
   return {
     id: `${Date.now()}-${round}-${randomInt(1000, 9999)}`,
     text: question.hint ? `${question.text}（${question.hint}）` : question.text,
+    html: question.html || question.text,
     level: question.level,
     answer: roundAnswer(question.answer),
   };
@@ -563,6 +645,8 @@ function startMathGame(room) {
   room.game.status = "playing";
   room.game.round = 0;
   room.game.lastResult = null;
+  room.game.targetScore = MATH_TARGET_SCORE;
+  room.game.winnerId = null;
   room.game.scores = Object.fromEntries(room.players.map((player) => [player.id, 0]));
   nextQuestion(room);
 }
@@ -585,6 +669,20 @@ function finishRound(room, result) {
   room.game.deadlineAt = null;
   broadcast(room);
   room.game.nextTimer = setTimeout(() => nextQuestion(room), NEXT_ROUND_DELAY_MS);
+}
+
+function finishMathGame(room, winner, result) {
+  clearGameTimers(room.game);
+  room.game.status = "finished";
+  room.game.winnerId = winner.id;
+  room.game.deadlineAt = null;
+  room.game.lastResult = {
+    ...result,
+    type: "finished",
+    winnerId: winner.id,
+    message: `${winner.name} 先得到 ${MATH_TARGET_SCORE} 分，获得本局胜利。`,
+  };
+  broadcast(room);
 }
 
 function emptyGomokuBoard() {
@@ -1031,22 +1129,32 @@ async function handleApi(request, response, url) {
     const correct = isCorrectAnswer(payload.answer, room.game.question.answer);
     if (correct) {
       room.game.scores[player.id] = (room.game.scores[player.id] || 0) + 1;
-      finishRound(room, {
+      const result = {
         type: "correct",
         message: `${player.name} 答对了，获得 1 分。`,
         playerId: player.id,
         answer: room.game.question.answer,
-      });
+      };
+      if (room.game.scores[player.id] >= MATH_TARGET_SCORE) {
+        finishMathGame(room, player, result);
+      } else {
+        finishRound(room, result);
+      }
     } else {
       if (opponent) {
         room.game.scores[opponent.id] = (room.game.scores[opponent.id] || 0) + 1;
       }
-      finishRound(room, {
+      const result = {
         type: "wrong",
         message: opponent ? `${player.name} 答错了，${opponent.name} 获得 1 分。` : `${player.name} 答错了。`,
         playerId: player.id,
         answer: room.game.question.answer,
-      });
+      };
+      if (opponent && room.game.scores[opponent.id] >= MATH_TARGET_SCORE) {
+        finishMathGame(room, opponent, result);
+      } else {
+        finishRound(room, result);
+      }
     }
     sendJson(response, 200, publicRoom(room));
     return;
