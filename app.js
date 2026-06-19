@@ -212,6 +212,7 @@ function renderRoom(room) {
   document.body.dataset.game = room.gameId;
   gameStage.classList.toggle("math-stage", room.gameId === "1");
   gameStage.classList.toggle("gomoku-stage", room.gameId === "2");
+  gameStage.dataset.phase = room.game?.status || "lobby";
   playerList.innerHTML = "";
 
   room.players.forEach((player, index) => {

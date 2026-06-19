@@ -18,6 +18,65 @@
   --move-y: 0px;
 }
 
+/* Math battle active scene: full-screen star field and transparent panels */
+body[data-view="lobby"][data-game="1"] .stage.math-stage {
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 232, 168, 0.24), transparent 22%),
+    linear-gradient(180deg, rgba(5, 7, 20, 0.08), rgba(4, 6, 16, 0.38)),
+    url("./assets/math-scene-bg.png") center center / cover no-repeat !important;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage[data-phase="playing"] {
+  place-items: center;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .stage-card,
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game {
+  border: 1px solid rgba(255, 226, 166, 0.34) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015) 46%, rgba(12, 16, 38, 0.2)),
+    rgba(7, 10, 26, 0.28) !important;
+  box-shadow:
+    inset 0 0 60px rgba(255, 239, 190, 0.05),
+    0 28px 90px rgba(0, 0, 0, 0.32) !important;
+  backdrop-filter: blur(8px) saturate(1.14);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage[data-phase="playing"] .math-game,
+body[data-view="lobby"][data-game="1"] .stage.math-stage[data-phase="between"] .math-game,
+body[data-view="lobby"][data-game="1"] .stage.math-stage[data-phase="finished"] .math-game {
+  width: min(820px, calc(100vw - 52px));
+  min-height: 320px;
+  align-content: center;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game h3 {
+  margin: 4px auto 0;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid rgba(255, 226, 166, 0.22);
+  border-radius: 16px;
+  background: rgba(4, 7, 20, 0.22);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .answer-row input {
+  color: #fff5da !important;
+  border-color: rgba(255, 230, 174, 0.36) !important;
+  background: rgba(4, 7, 20, 0.2) !important;
+  box-shadow: inset 0 0 22px rgba(255, 255, 255, 0.025);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .answer-row input:focus {
+  border-color: rgba(255, 236, 186, 0.72) !important;
+  box-shadow:
+    0 0 0 4px rgba(255, 226, 166, 0.12),
+    inset 0 0 22px rgba(255, 255, 255, 0.04);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-tip,
+body[data-view="lobby"][data-game="1"] .stage.math-stage .result-view p {
+  color: rgba(255, 244, 218, 0.78);
+}
+
 .entry-cover {
   position: fixed;
   inset: 0;
