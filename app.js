@@ -301,6 +301,7 @@ function renderGameArea(room, allReady) {
 
   if (!room.game || room.game.status === "lobby") {
     gameStage.innerHTML = `
+      ${renderMathRoomOverlay(room)}
       <div class="stage-card">
         <strong>${allReady ? "两位玩家已准备" : "等待两位玩家进入并准备"}</strong>
         <span>${allReady ? "房主点击开始游戏后会出现第一题。" : `当前 ${room.players.length}/2 人在线`}</span>
@@ -311,6 +312,7 @@ function renderGameArea(room, allReady) {
 
   if (room.game.status === "between") {
     gameStage.innerHTML = `
+      ${renderMathRoomOverlay(room)}
       <div class="math-game result-view">
         <p class="math-label">第 ${room.game.round} 题结果</p>
         <h3>${escapeHtml(room.game.lastResult?.message || "进入下一题")}</h3>
@@ -322,6 +324,7 @@ function renderGameArea(room, allReady) {
 
   if (room.game.status === "finished") {
     gameStage.innerHTML = `
+      ${renderMathRoomOverlay(room)}
       <div class="math-game result-view">
         <p class="math-label">本局结束</p>
         <h3>${escapeHtml(room.game.lastResult?.message || "已分出胜负")}</h3>
@@ -336,6 +339,7 @@ function renderGameArea(room, allReady) {
   if (questionChanged) {
     state.currentQuestionId = room.game.question?.id;
     gameStage.innerHTML = `
+      ${renderMathRoomOverlay(room)}
       <form class="math-game" id="answerForm">
         <div class="math-topline">
           <span>${escapeHtml(room.game.question.level)}</span>
@@ -354,6 +358,48 @@ function renderGameArea(room, allReady) {
   }
 
   startCountdown(room.game.deadlineAt);
+}
+
+function renderMathRoomOverlay(room) {
+  const targetScore = room.game?.targetScore || 10;
+  return `
+    <aside class="math-room-info" aria-label="数学房间信息">
+      <p class="math-label">数学房间</p>
+      <h3>房间 ${escapeHtml(room.roomCode)}</h3>
+      <span class="math-room-count">当前 ${room.players.length}/2 人在线</span>
+      <div class="math-room-players">
+        ${[0, 1].map((index) => renderMathRoomPlayer(room, index, targetScore)).join("")}
+      </div>
+    </aside>
+  `;
+}
+
+function renderMathRoomPlayer(room, index, targetScore) {
+  const player = room.players[index];
+  if (!player) {
+    return `
+      <div class="math-room-player empty">
+        <div class="player-avatar">?</div>
+        <div>
+          <strong>${index + 1}P 等待加入</strong>
+          <span>未在线</span>
+        </div>
+      </div>
+    `;
+  }
+  const score = room.game?.scores?.[player.id] || 0;
+  const status = room.game?.status === "playing" || room.game?.status === "between" || room.game?.status === "finished"
+    ? `${score}/${targetScore} 分`
+    : player.ready ? "已准备" : "未准备";
+  return `
+    <div class="math-room-player">
+      <div class="player-avatar">${avatarMarkup(player.name, player.avatar)}</div>
+      <div>
+        <strong>${index + 1}P ${escapeHtml(player.name)}</strong>
+        <span>${escapeHtml(status)}</span>
+      </div>
+    </div>
+  `;
 }
 
 function clearCountdown() {

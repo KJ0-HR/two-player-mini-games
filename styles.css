@@ -206,6 +206,81 @@ body[data-view="lobby"][data-game="1"] .stage.math-stage button {
   background: #e4c47f;
 }
 
+body[data-view="lobby"][data-game="1"] .math-room-info {
+  position: absolute;
+  left: 24px;
+  top: 24px;
+  z-index: 8;
+  width: min(360px, calc(100vw - 128px));
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  color: #f8ebd2;
+  border: 1px solid rgba(244, 220, 170, 0.34);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
+    rgba(10, 12, 28, 0.62);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-info h3 {
+  margin: 0;
+  color: #fff1c8;
+  font-size: clamp(28px, 3vw, 48px);
+  line-height: 1;
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-count {
+  color: rgba(248, 235, 210, 0.72);
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-players {
+  display: grid;
+  gap: 10px;
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-player {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(244, 220, 170, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-player .player-avatar {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(244, 220, 170, 0.42);
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-player strong,
+body[data-view="lobby"][data-game="1"] .math-room-player span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-player strong {
+  color: #fff3d6;
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-player span {
+  margin-top: 3px;
+  color: rgba(248, 235, 210, 0.7);
+}
+
+body[data-view="lobby"][data-game="1"] .math-room-player.empty {
+  opacity: 0.72;
+}
+
 body[data-view="lobby"][data-game="1"] .lobby-actions {
   position: fixed;
   left: 22px;
@@ -234,6 +309,30 @@ body[data-view="lobby"][data-game="1"] #leaveRoom {
   width: 74px;
   height: 42px;
   padding: 0;
+}
+
+@media (max-width: 980px) {
+  body[data-view="lobby"][data-game="1"] .math-room-info {
+    left: 14px;
+    top: 14px;
+    width: calc(100vw - 108px);
+    padding: 14px;
+  }
+
+  body[data-view="lobby"][data-game="1"] .math-room-players {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body[data-view="lobby"][data-game="1"] .math-room-player {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px;
+  }
+
+  body[data-view="lobby"][data-game="1"] .math-room-player .player-avatar {
+    width: 42px;
+    height: 42px;
+  }
 }
 
 /* Full-screen static Gomoku scene override */
