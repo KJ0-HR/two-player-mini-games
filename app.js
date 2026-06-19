@@ -25,6 +25,8 @@ const state = {
   lastGomokuMoveCount: 0,
 };
 
+const entryCover = document.querySelector("#entryCover");
+const enterGame = document.querySelector("#enterGame");
 const authPanel = document.querySelector("#authPanel");
 const authForm = document.querySelector("#authForm");
 const accountId = document.querySelector("#accountId");
@@ -118,6 +120,10 @@ function getPlayerAvatar() {
   return state.account?.avatar || "";
 }
 
+function closeEntryCover() {
+  entryCover?.classList.add("hidden");
+}
+
 function showAuth() {
   document.body.dataset.view = "auth";
   document.body.dataset.game = "";
@@ -127,6 +133,8 @@ function showAuth() {
   accountPassword.value = "";
   updateVisualMotion();
 }
+
+enterGame?.addEventListener("click", closeEntryCover);
 
 function showSetup() {
   document.body.dataset.view = "setup";
