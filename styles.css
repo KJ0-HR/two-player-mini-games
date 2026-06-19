@@ -3110,3 +3110,14 @@ html body[data-view="lobby"][data-game="3"] .lobby-actions button {
     height: 46px;
   }
 }
+
+/* Setup selector fallback: keep Game 3 visually marked as Racing even if the image tag is slow to load. */
+body[data-view="setup"] .game-slice[data-game="3"] {
+  background:
+    linear-gradient(180deg, rgba(6, 8, 13, 0.08), rgba(6, 8, 13, 0.48)),
+    url("./assets/game-racing.png") center center / cover no-repeat;
+}
+
+body[data-view="setup"] .game-slice[data-game="3"]::before {
+  background: linear-gradient(90deg, rgba(5, 7, 12, 0.16), rgba(5, 7, 12, 0.64));
+}
