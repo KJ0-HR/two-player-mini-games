@@ -122,6 +122,7 @@ function getPlayerAvatar() {
 
 function closeEntryCover() {
   entryCover?.classList.add("hidden");
+  document.body.classList.remove("entry-active");
 }
 
 function showAuth() {
