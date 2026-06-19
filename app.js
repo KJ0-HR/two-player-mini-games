@@ -386,9 +386,20 @@ function mathQuestionMarkup(question) {
 function renderGomokuArea(room, allReady) {
   if (!room.game || room.game.status === "lobby") {
     gameStage.innerHTML = `
-      <div class="stage-card">
-        <strong>${allReady ? "两位玩家已准备" : "等待两位玩家进入并准备"}</strong>
-        <span>${allReady ? "点击开始游戏后，黑棋先手。" : `当前 ${room.players.length}/2 人在线`}</span>
+      <div class="gomoku-game gomoku-waiting">
+        <div class="gomoku-waiting-info">
+          <p class="math-label">五子棋房间</p>
+          <h3>房间 ${escapeHtml(room.roomCode)}</h3>
+          <span>${allReady ? "两位玩家已准备，房主可开始游戏。" : `当前 ${room.players.length}/2 人在线`}</span>
+        </div>
+        <div class="gomoku-waiting-members">
+          ${renderGomokuWaitingMember(room.players[0], 0)}
+          ${renderGomokuWaitingMember(room.players[1], 1)}
+        </div>
+        <div class="gomoku-waiting-hint">
+          <strong>${allReady ? "准备完成" : "等待进入"}</strong>
+          <span>${allReady ? "点击左下角开始游戏，黑棋先手。" : "把房间号发给对方，双方准备后开始。"}</span>
+        </div>
       </div>
     `;
     return;
@@ -437,6 +448,27 @@ function renderGomokuArea(room, allReady) {
         <input id="chatInput" maxlength="80" placeholder="输入聊天内容，气泡显示 6 秒" />
         <button type="submit">发送</button>
       </form>
+    </div>
+  `;
+}
+
+function renderGomokuWaitingMember(player, index) {
+  const side = index === 0 ? "black" : "white";
+  if (!player) {
+    return `
+      <div class="gomoku-waiting-member empty">
+        <div class="gomoku-avatar">?</div>
+        <strong>${index + 1}P 等待加入</strong>
+        <span>未在线</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="gomoku-waiting-member">
+      <div class="gomoku-avatar">${avatarMarkup(player.name, player.avatar)}</div>
+      <strong>${index + 1}P ${escapeHtml(player.name)}</strong>
+      <span>${side === "black" ? "黑棋" : "白棋"} · ${player.ready ? "已准备" : "未准备"}</span>
     </div>
   `;
 }
