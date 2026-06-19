@@ -2668,3 +2668,58 @@ body[data-view="setup"] #setupStatus {
     margin: 12px 18px 20px;
   }
 }
+
+/* Final override: keep Game 1 in the real full-screen math background. */
+html body[data-view="lobby"][data-game="1"],
+html body[data-view="lobby"][data-game="1"] .page-shell,
+html body[data-view="lobby"][data-game="1"] .lobby-panel,
+html body[data-view="lobby"][data-game="1"] .lobby-grid,
+html body[data-view="lobby"][data-game="1"] .game-placeholder,
+html body[data-view="lobby"][data-game="1"] .stage.math-stage {
+  background-color: #070918 !important;
+}
+
+html body[data-view="lobby"][data-game="1"] .stage.math-stage {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  background:
+    linear-gradient(180deg, rgba(4, 6, 18, 0.08), rgba(4, 6, 18, 0.24)),
+    url("./assets/math-scene-bg.png") center center / cover no-repeat !important;
+  background-size: cover !important;
+  background-position: center center !important;
+}
+
+html body[data-view="lobby"][data-game="1"] .stage.math-stage::before,
+html body[data-view="lobby"][data-game="1"] .stage.math-stage::after {
+  display: none !important;
+  content: none !important;
+}
+
+html body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game,
+html body[data-view="lobby"][data-game="1"] .stage.math-stage .stage-card {
+  color: #fff1c8 !important;
+  border: 1px solid rgba(255, 228, 172, 0.34) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 48%),
+    rgba(8, 11, 28, 0.22) !important;
+  backdrop-filter: blur(5px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(5px) saturate(1.1) !important;
+}
+
+html body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game h3 {
+  background: rgba(7, 9, 23, 0.18) !important;
+}
+
+html body[data-view="lobby"][data-game="1"] .stage.math-stage .answer-row input {
+  color: #fff4d6 !important;
+  background: rgba(7, 9, 23, 0.18) !important;
+}
