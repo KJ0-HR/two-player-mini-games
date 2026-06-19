@@ -83,6 +83,159 @@ body.entry-active .scene-layers {
   transform: translateY(-3px);
 }
 
+/* Full-screen math scene */
+body[data-view="lobby"][data-game="1"] {
+  overflow: hidden;
+  background: #090b18;
+}
+
+body[data-view="lobby"][data-game="1"] .page-shell {
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+body[data-view="lobby"][data-game="1"] .frame-nav,
+body[data-view="lobby"][data-game="1"] .copy-row,
+body[data-view="lobby"][data-game="1"] .game-placeholder > h3,
+body[data-view="lobby"][data-game="1"] .players,
+body[data-view="lobby"][data-game="1"] #lobbyStatus {
+  display: none;
+}
+
+body[data-view="lobby"][data-game="1"] .lobby-header {
+  position: fixed;
+  inset: 0 0 auto auto;
+  z-index: 20;
+  display: block;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body[data-view="lobby"][data-game="1"] .lobby-header > div {
+  display: none;
+}
+
+body[data-view="lobby"][data-game="1"] .lobby-panel,
+body[data-view="lobby"][data-game="1"] .lobby-grid,
+body[data-view="lobby"][data-game="1"] .game-placeholder,
+body[data-view="lobby"][data-game="1"] .stage.math-stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(7, 8, 19, 0.18), rgba(7, 8, 19, 0.38)),
+    url("./assets/math-scene-bg.png") center center / cover no-repeat;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .stage-card,
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game {
+  width: min(760px, calc(100vw - 48px));
+  margin: 0;
+  color: #f8ebd2;
+  border: 1px solid rgba(244, 220, 170, 0.34);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
+    rgba(10, 12, 28, 0.58);
+  box-shadow:
+    inset 0 0 46px rgba(255, 240, 194, 0.04),
+    0 30px 90px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game {
+  padding: clamp(24px, 4vw, 44px);
+  text-align: center;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-topline {
+  color: rgba(248, 235, 210, 0.78);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-label,
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game h3,
+body[data-view="lobby"][data-game="1"] .stage.math-stage .stage-card strong {
+  color: #fff1c8;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .math-game h3 {
+  font-size: clamp(30px, 4vw, 56px);
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.34);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage .answer-row {
+  grid-template-columns: minmax(0, 1fr) 120px;
+  margin-top: 26px;
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage input {
+  color: #f8ebd2;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(244, 220, 170, 0.28);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage input::placeholder {
+  color: rgba(248, 235, 210, 0.55);
+}
+
+body[data-view="lobby"][data-game="1"] .stage.math-stage button {
+  color: #241b12;
+  background: #e4c47f;
+}
+
+body[data-view="lobby"][data-game="1"] .lobby-actions {
+  position: fixed;
+  left: 22px;
+  bottom: 22px;
+  z-index: 20;
+  width: 260px;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+body[data-view="lobby"][data-game="1"] .lobby-actions button,
+body[data-view="lobby"][data-game="1"] #leaveRoom {
+  color: #f4e3c1;
+  background: rgba(13, 12, 28, 0.62);
+  border-color: rgba(232, 203, 139, 0.36);
+  backdrop-filter: blur(8px);
+}
+
+body[data-view="lobby"][data-game="1"] #leaveRoom {
+  position: fixed;
+  right: 22px;
+  top: 22px;
+  z-index: 20;
+  width: 74px;
+  height: 42px;
+  padding: 0;
+}
+
 /* Full-screen static Gomoku scene override */
 body[data-view="lobby"][data-game="2"] {
   overflow: hidden;

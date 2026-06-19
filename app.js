@@ -128,6 +128,7 @@ function closeEntryCover() {
 function showAuth() {
   document.body.dataset.view = "auth";
   document.body.dataset.game = "";
+  gameStage.classList.remove("math-stage", "gomoku-stage");
   authPanel.classList.remove("hidden");
   setupPanel.classList.add("hidden");
   lobbyPanel.classList.add("hidden");
@@ -140,6 +141,7 @@ enterGame?.addEventListener("click", closeEntryCover);
 function showSetup() {
   document.body.dataset.view = "setup";
   document.body.dataset.game = "";
+  gameStage.classList.remove("math-stage", "gomoku-stage");
   authPanel.classList.add("hidden");
   setupPanel.classList.remove("hidden");
   lobbyPanel.classList.add("hidden");
@@ -208,6 +210,7 @@ function renderRoom(room) {
   state.lastRoom = room;
   state.gameId = room.gameId;
   document.body.dataset.game = room.gameId;
+  gameStage.classList.toggle("math-stage", room.gameId === "1");
   gameStage.classList.toggle("gomoku-stage", room.gameId === "2");
   playerList.innerHTML = "";
 
@@ -429,6 +432,7 @@ function renderGomokuArea(room, allReady) {
           <p class="math-label">传统五子棋</p>
           <h3>${gomokuTitle(room, currentPlayer)}</h3>
         </div>
+        <strong class="gomoku-turn-clock">本手剩余 <span id="roundTimer">04:00</span></strong>
         <button type="button" class="secondary" id="undoRequest" ${canRequestUndo(room) ? "" : "disabled"}>申请悔棋</button>
       </div>
       <div class="gomoku-arena">
@@ -459,6 +463,9 @@ function renderGomokuArea(room, allReady) {
       </form>
     </div>
   `;
+  if (room.game.status === "playing" && !room.game.pendingUndo && room.game.turnDeadlineAt) {
+    startCountdown(room.game.turnDeadlineAt);
+  }
 }
 
 function renderGomokuWaitingMember(player, index) {
@@ -963,6 +970,7 @@ leaveRoom.addEventListener("click", async () => {
   state.currentQuestionId = null;
   state.lastGomokuMoveCount = 0;
   document.body.dataset.game = "";
+  gameStage.classList.remove("math-stage");
   gameStage.classList.remove("gomoku-stage");
   lobbyPanel.classList.add("hidden");
   showSetup();

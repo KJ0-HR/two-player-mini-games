@@ -19,6 +19,7 @@ const ROUND_MS = 60000;
 const NEXT_ROUND_DELAY_MS = 1600;
 const MATH_TARGET_SCORE = 10;
 const GOMOKU_SIZE = 25;
+const GOMOKU_TURN_MS = 4 * 60 * 1000;
 const CHAT_BUBBLE_MS = 6000;
 const CAMERA_FRAME_MS = 1400;
 
@@ -307,6 +308,7 @@ function publicRoom(room) {
         lastResult: room.game.lastResult,
         board: room.game.board || null,
         currentPlayerId: room.game.currentPlayerId || null,
+        turnDeadlineAt: room.game.turnDeadlineAt || null,
         winnerId: room.game.winnerId || null,
         winnerName: room.game.winnerId ? room.players.find((player) => player.id === room.game.winnerId)?.name || "" : "",
         moves: room.game.moves || [],
@@ -700,12 +702,46 @@ function startGomokuGame(room) {
   room.game.board = emptyGomokuBoard();
   room.game.moves = [];
   room.game.currentPlayerId = room.players[0].id;
+  room.game.turnDeadlineAt = Date.now() + GOMOKU_TURN_MS;
   room.game.winnerId = null;
   room.game.pendingUndo = null;
   room.game.chatBubbles = [];
   room.game.cameraFrame = null;
   room.game.message = `${room.players[0].name} 执黑先手。`;
+  scheduleGomokuTurnTimeout(room);
   broadcast(room);
+}
+
+function finishGomokuByTimeout(room, timeoutPlayerId) {
+  clearGameTimers(room.game);
+  const winner = room.players.find((player) => player.id !== timeoutPlayerId);
+  const timeoutPlayer = room.players.find((player) => player.id === timeoutPlayerId);
+  room.game.status = "finished";
+  room.game.winnerId = winner?.id || null;
+  room.game.turnDeadlineAt = null;
+  room.game.pendingUndo = null;
+  room.game.message = winner
+    ? `${timeoutPlayer?.name || "当前玩家"} 思考超过 4 分钟，${winner.name} 获胜。`
+    : `${timeoutPlayer?.name || "当前玩家"} 思考超过 4 分钟，本局结束。`;
+}
+
+function scheduleGomokuTurnTimeout(room) {
+  if (room.game.timer) {
+    clearTimeout(room.game.timer);
+    room.game.timer = null;
+  }
+  const playerId = room.game.currentPlayerId;
+  const deadlineAt = room.game.turnDeadlineAt;
+  if (room.game.status !== "playing" || room.game.pendingUndo || !playerId || !deadlineAt) {
+    return;
+  }
+  room.game.timer = setTimeout(() => {
+    if (room.game.status !== "playing" || room.game.pendingUndo || room.game.currentPlayerId !== playerId || room.game.turnDeadlineAt !== deadlineAt) {
+      return;
+    }
+    finishGomokuByTimeout(room, playerId);
+    broadcast(room);
+  }, Math.max(0, deadlineAt - Date.now()));
 }
 
 function playerStone(room, playerId) {
@@ -754,6 +790,10 @@ function playGomokuMove(room, player, row, col) {
   if (room.game.currentPlayerId !== player.id) {
     throw new Error("还没轮到你落子。");
   }
+  if (room.game.turnDeadlineAt && Date.now() > room.game.turnDeadlineAt) {
+    finishGomokuByTimeout(room, player.id);
+    return;
+  }
   if (!Number.isInteger(row) || !Number.isInteger(col) || row < 0 || row >= GOMOKU_SIZE || col < 0 || col >= GOMOKU_SIZE) {
     throw new Error("落子位置不正确。");
   }
@@ -766,21 +806,27 @@ function playGomokuMove(room, player, row, col) {
   room.game.moves.push({ row, col, playerId: player.id, stone });
 
   if (hasFiveInRow(room.game.board, row, col, stone)) {
+    clearGameTimers(room.game);
     room.game.status = "finished";
     room.game.winnerId = player.id;
+    room.game.turnDeadlineAt = null;
     room.game.message = `${player.name} 连成五子，获胜。`;
     return;
   }
 
   if (room.game.moves.length === GOMOKU_SIZE * GOMOKU_SIZE) {
+    clearGameTimers(room.game);
     room.game.status = "finished";
+    room.game.turnDeadlineAt = null;
     room.game.message = "棋盘已满，本局平局。";
     return;
   }
 
   room.game.currentPlayerId = nextGomokuPlayerId(room, player.id);
+  room.game.turnDeadlineAt = Date.now() + GOMOKU_TURN_MS;
   const nextPlayer = room.players.find((item) => item.id === room.game.currentPlayerId);
   room.game.message = `轮到 ${nextPlayer?.name || "下一位玩家"} 落子。`;
+  scheduleGomokuTurnTimeout(room);
 }
 
 function requestUndo(room, player) {
@@ -798,6 +844,11 @@ function requestUndo(room, player) {
     throw new Error("只能在自己刚落子后申请悔棋。");
   }
   const opponent = room.players.find((item) => item.id !== player.id);
+  if (room.game.timer) {
+    clearTimeout(room.game.timer);
+    room.game.timer = null;
+  }
+  room.game.turnDeadlineAt = null;
   room.game.pendingUndo = {
     requesterId: player.id,
     opponentId: opponent?.id || "",
@@ -858,9 +909,11 @@ function completeUndo(room, player, proof) {
   }
   room.game.board[lastMove.row][lastMove.col] = "";
   room.game.currentPlayerId = player.id;
+  room.game.turnDeadlineAt = Date.now() + GOMOKU_TURN_MS;
   room.game.pendingUndo = null;
   room.game.cameraFrame = null;
   room.game.message = `${player.name} 已完成条件，成功悔棋。`;
+  scheduleGomokuTurnTimeout(room);
 }
 
 function validatePayload(payload) {
