@@ -20,6 +20,8 @@ const NEXT_ROUND_DELAY_MS = 1600;
 const MATH_TARGET_SCORE = 10;
 const GOMOKU_SIZE = 25;
 const GOMOKU_TURN_MS = 4 * 60 * 1000;
+const RACE_TARGET_LAPS = 8;
+const RACE_LIMIT_MS = 5 * 60 * 1000;
 const CHAT_BUBBLE_MS = 6000;
 const CAMERA_FRAME_MS = 1400;
 
@@ -290,6 +292,9 @@ function pruneGameTransient(game) {
 
 function publicRoom(room) {
   pruneGameTransient(room.game);
+  if (room.gameId === "3" && room.game?.status === "playing") {
+    updateRaceRoom(room);
+  }
   const game = room.game
     ? {
         status: room.game.status,
@@ -316,6 +321,7 @@ function publicRoom(room) {
         message: room.game.message || "",
         chatBubbles: room.game.chatBubbles || [],
         cameraFrame: room.game.cameraFrame || null,
+        race: room.game.race || null,
         serverNow: Date.now(),
       }
     : null;
@@ -687,6 +693,131 @@ function finishMathGame(room, winner, result) {
   broadcast(room);
 }
 
+function createRaceCar(player, index) {
+  return {
+    playerId: player.id,
+    name: player.name,
+    lane: index === 0 ? -0.24 : 0.24,
+    speed: 0,
+    distance: 0,
+    heading: 0,
+    nitro: 1,
+    controls: {},
+    lastUpdateAt: Date.now(),
+  };
+}
+
+function startRaceGame(room) {
+  clearGameTimers(room.game);
+  const now = Date.now();
+  room.game.status = "playing";
+  room.game.round = 0;
+  room.game.question = null;
+  room.game.deadlineAt = now + RACE_LIMIT_MS;
+  room.game.raceDeadlineAt = now + RACE_LIMIT_MS;
+  room.game.lastResult = null;
+  room.game.winnerId = null;
+  room.game.message = "红灯熄灭，比赛开始。";
+  room.game.race = {
+    targetLaps: RACE_TARGET_LAPS,
+    startedAt: now,
+    deadlineAt: now + RACE_LIMIT_MS,
+    racers: Object.fromEntries(room.players.map((player, index) => [player.id, createRaceCar(player, index)])),
+  };
+  room.game.timer = setTimeout(() => finishRaceByTime(room), RACE_LIMIT_MS);
+  broadcast(room);
+}
+
+function updateRaceRoom(room) {
+  const race = room.game?.race;
+  if (!race || room.game.status !== "playing") {
+    return;
+  }
+  const now = Date.now();
+  Object.values(race.racers).forEach((car) => {
+    const dt = Math.min(0.28, Math.max(0, (now - (car.lastUpdateAt || now)) / 1000));
+    car.lastUpdateAt = now;
+    if (!dt) {
+      return;
+    }
+    const controls = car.controls || {};
+    const steer = (controls.d ? 1 : 0) - (controls.a ? 1 : 0);
+    let acceleration = controls.w ? 0.023 : -0.006;
+    if (controls.s) {
+      acceleration -= 0.038;
+    }
+    if (controls.space) {
+      acceleration -= 0.02;
+    }
+    if (controls.shift && car.nitro > 0.02 && car.speed > 0.006) {
+      acceleration += 0.032;
+      car.nitro = Math.max(0, car.nitro - dt * 0.26);
+    } else {
+      car.nitro = Math.min(1, car.nitro + dt * 0.055);
+    }
+    const maxSpeed = controls.shift && car.nitro > 0 ? 0.058 : 0.044;
+    car.speed = Math.max(0, Math.min(maxSpeed, car.speed + acceleration * dt));
+    car.speed *= controls.space ? 0.965 : 0.992;
+    car.lane = Math.max(-1, Math.min(1, car.lane + steer * dt * (controls.space ? 1.7 : 0.82)));
+    car.heading = steer * (controls.space ? 18 : 10) - car.lane * 4;
+    car.distance += car.speed * dt * (1 - Math.abs(car.lane) * 0.025);
+  });
+  const winnerCar = Object.values(race.racers).find((car) => car.distance >= RACE_TARGET_LAPS);
+  if (winnerCar) {
+    finishRace(room, winnerCar.playerId, `${winnerCar.name} 率先完成 ${RACE_TARGET_LAPS} 圈，获得胜利。`);
+    return;
+  }
+  if (Date.now() >= race.deadlineAt) {
+    finishRaceByTime(room);
+  }
+}
+
+function finishRace(room, winnerId, message) {
+  clearGameTimers(room.game);
+  room.game.status = "finished";
+  room.game.winnerId = winnerId || null;
+  room.game.deadlineAt = null;
+  room.game.raceDeadlineAt = null;
+  room.game.message = message;
+  room.game.lastResult = {
+    type: "race-finished",
+    winnerId: winnerId || null,
+    message,
+  };
+  broadcast(room);
+}
+
+function finishRaceByTime(room) {
+  if (!room.game?.race || room.game.status !== "playing") {
+    return;
+  }
+  const racers = Object.values(room.game.race.racers);
+  racers.sort((a, b) => b.distance - a.distance);
+  const leader = racers[0];
+  const tied = racers[1] && Math.abs(leader.distance - racers[1].distance) < 0.0001;
+  finishRace(
+    room,
+    tied ? null : leader.playerId,
+    tied ? "规定时间结束，双方距离相同，本局平局。" : `规定时间结束，${leader.name} 距离领先，获得胜利。`,
+  );
+}
+
+function updateRaceControls(room, player, controls) {
+  if (room.gameId !== "3" || room.game?.status !== "playing" || !room.game.race?.racers?.[player.id]) {
+    throw new Error("赛车比赛还没有开始。");
+  }
+  updateRaceRoom(room);
+  room.game.race.racers[player.id].controls = {
+    w: Boolean(controls.w),
+    s: Boolean(controls.s),
+    a: Boolean(controls.a),
+    d: Boolean(controls.d),
+    space: Boolean(controls.space),
+    shift: Boolean(controls.shift),
+  };
+  updateRaceRoom(room);
+}
+
 function emptyGomokuBoard() {
   return Array.from({ length: GOMOKU_SIZE }, () => Array.from({ length: GOMOKU_SIZE }, () => ""));
 }
@@ -1020,8 +1151,8 @@ async function handleApi(request, response, url) {
       sendJson(response, 404, { error: "玩家不在房间中。" });
       return;
     }
-    if (!["1", "2"].includes(room.gameId)) {
-      sendJson(response, 400, { error: "当前只接入了游戏 1 和游戏 2。" });
+    if (!["1", "2", "3"].includes(room.gameId)) {
+      sendJson(response, 400, { error: "当前只接入了游戏 1、游戏 2 和游戏 3。" });
       return;
     }
     if (room.players.length !== 2 || !room.players.every((item) => item.ready)) {
@@ -1030,10 +1161,31 @@ async function handleApi(request, response, url) {
     }
     if (room.gameId === "1") {
       startMathGame(room);
-    } else {
+    } else if (room.gameId === "2") {
       startGomokuGame(room);
+    } else {
+      startRaceGame(room);
     }
     sendJson(response, 200, publicRoom(room));
+    return;
+  }
+
+  const raceControlMatch = url.pathname.match(/^\/api\/rooms\/(\d{4})\/race-control$/);
+  if (request.method === "POST" && raceControlMatch) {
+    const room = rooms.get(raceControlMatch[1]);
+    const payload = await readBody(request);
+    const player = room?.players.find((item) => item.id === payload.playerId);
+    if (!room || !player) {
+      sendJson(response, 404, { error: "玩家不在房间中。" });
+      return;
+    }
+    if (room.gameId !== "3") {
+      sendJson(response, 400, { error: "当前房间不是赛车竞速。" });
+      return;
+    }
+    updateRaceControls(room, player, payload.controls || {});
+    sendJson(response, 200, publicRoom(room));
+    broadcast(room);
     return;
   }
 

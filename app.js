@@ -1,7 +1,7 @@
 const gameNames = {
   1: "游戏 1：数学计算能力",
   2: "游戏 2：五子棋对决",
-  3: "游戏 3：待接入",
+  3: "游戏 3：赛车竞速",
   4: "游戏 4：待接入",
   5: "游戏 5：待接入",
 };
@@ -23,6 +23,8 @@ const state = {
   transientTimer: null,
   lastRoom: null,
   lastGomokuMoveCount: 0,
+  raceControls: { w: false, s: false, a: false, d: false, space: false, shift: false },
+  raceControlTimer: null,
 };
 
 const entryCover = document.querySelector("#entryCover");
@@ -90,6 +92,23 @@ window.addEventListener("pointermove", (event) => {
   rootStyle.setProperty("--move-y", `${y.toFixed(2)}px`);
 }, { passive: true });
 
+window.addEventListener("keydown", (event) => {
+  const control = keyToRaceControl(event);
+  if (!control || state.gameId !== "3" || state.lastRoom?.game?.status !== "playing") {
+    return;
+  }
+  event.preventDefault();
+  state.raceControls[control] = true;
+});
+
+window.addEventListener("keyup", (event) => {
+  const control = keyToRaceControl(event);
+  if (!control) {
+    return;
+  }
+  state.raceControls[control] = false;
+});
+
 function api(path, options = {}) {
   return fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -128,7 +147,7 @@ function closeEntryCover() {
 function showAuth() {
   document.body.dataset.view = "auth";
   document.body.dataset.game = "";
-  gameStage.classList.remove("math-stage", "gomoku-stage");
+  gameStage.classList.remove("math-stage", "gomoku-stage", "racing-stage");
   authPanel.classList.remove("hidden");
   setupPanel.classList.add("hidden");
   lobbyPanel.classList.add("hidden");
@@ -141,7 +160,7 @@ enterGame?.addEventListener("click", closeEntryCover);
 function showSetup() {
   document.body.dataset.view = "setup";
   document.body.dataset.game = "";
-  gameStage.classList.remove("math-stage", "gomoku-stage");
+  gameStage.classList.remove("math-stage", "gomoku-stage", "racing-stage");
   authPanel.classList.add("hidden");
   setupPanel.classList.remove("hidden");
   lobbyPanel.classList.add("hidden");
@@ -212,6 +231,7 @@ function renderRoom(room) {
   document.body.dataset.game = room.gameId;
   gameStage.classList.toggle("math-stage", room.gameId === "1");
   gameStage.classList.toggle("gomoku-stage", room.gameId === "2");
+  gameStage.classList.toggle("racing-stage", room.gameId === "3");
   gameStage.dataset.phase = room.game?.status || "lobby";
   playerList.innerHTML = "";
 
@@ -250,10 +270,12 @@ function renderRoom(room) {
     ? room.game?.status === "playing" || room.game?.status === "between"
     : room.gameId === "2"
       ? room.game?.status === "playing"
-      : false;
+      : room.gameId === "3"
+        ? room.game?.status === "playing"
+        : false;
   readyToggle.disabled = gameStarted;
   readyToggle.textContent = state.ready ? "取消准备" : "准备";
-  startGame.disabled = !allReady || gameStarted || !["1", "2"].includes(room.gameId);
+  startGame.disabled = !allReady || gameStarted || !["1", "2", "3"].includes(room.gameId);
   const gameFinished = room.game?.status === "finished";
   startGame.textContent = gameStarted ? "游戏进行中" : gameFinished ? "重新开始" : "开始游戏";
   renderGameArea(room, allReady);
@@ -286,9 +308,17 @@ function renderGameArea(room, allReady) {
   clearCountdown();
 
   if (room.gameId === "2") {
+    stopRaceControlLoop();
     renderGomokuArea(room, allReady);
     return;
   }
+
+  if (room.gameId === "3") {
+    renderRacingArea(room, allReady);
+    return;
+  }
+
+  stopRaceControlLoop();
 
   if (room.gameId !== "1") {
     gameStage.innerHTML = `
@@ -633,6 +663,165 @@ function renderUndoPanel(room, me) {
   return "";
 }
 
+function renderRacingArea(room, allReady) {
+  const race = room.game?.race;
+  if (!room.game || room.game.status === "lobby" || !race) {
+    stopRaceControlLoop();
+    gameStage.innerHTML = `
+      <div class="racing-game racing-waiting">
+        <div class="racing-room-card">
+          <p class="math-label">赛车竞速房间</p>
+          <h3>房间 ${escapeHtml(room.roomCode)}</h3>
+          <span>${allReady ? "两位车手已准备，房主可开始比赛。" : `当前 ${room.players.length}/2 人在线`}</span>
+        </div>
+        <div class="racing-grid">
+          ${[0, 1].map((index) => renderRaceMember(room.players[index], index, null)).join("")}
+        </div>
+        <div class="racing-rule-card">
+          <strong>规则</strong>
+          <span>限时 5 分钟，谁先完成 8 圈谁获胜；时间到则领先者获胜。</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const me = room.players.find((player) => player.id === state.playerId);
+  const myCar = race.racers?.[state.playerId] || Object.values(race.racers || {})[0];
+  const otherCar = Object.values(race.racers || {}).find((car) => car.playerId !== state.playerId) || null;
+  const targetLaps = race.targetLaps || 8;
+  const myLap = Math.min(targetLaps, Math.floor(myCar?.distance || 0));
+  const otherLap = Math.min(targetLaps, Math.floor(otherCar?.distance || 0));
+  const progress = ((myCar?.distance || 0) % 1) * 100;
+  const speedKmh = Math.round((myCar?.speed || 0) * 7200);
+  const lane = Number(myCar?.lane || 0).toFixed(3);
+  const heading = Number(myCar?.heading || 0).toFixed(2);
+  const gap = otherCar ? Math.max(-0.5, Math.min(0.5, (otherCar.distance || 0) - (myCar?.distance || 0))) : 0;
+  const carLeft = 50 + Number(lane) * 24;
+  const rivalLeft = 50 + gap * 42;
+  const rivalTop = 32 - gap * 70;
+  const raceFinished = room.game.status === "finished";
+
+  gameStage.innerHTML = `
+    <div class="racing-game racing-live ${raceFinished ? "finished" : ""}">
+      <div class="racing-hud">
+        <div>
+          <p class="math-label">F1 风格竞速</p>
+          <h3>${escapeHtml(room.game.message || (raceFinished ? "比赛结束" : "比赛进行中"))}</h3>
+        </div>
+        <strong id="roundTimer">${formatRaceClock((race.deadlineAt || room.game.deadlineAt) - (room.game.serverNow || Date.now()))}</strong>
+      </div>
+      <div class="racing-viewport" style="--car-left:${carLeft}%; --rival-left:${rivalLeft}%; --rival-top:${rivalTop}%; --heading:${heading}deg; --progress:${progress}%;">
+        <div class="race-skyline"></div>
+        <div class="race-track-perspective">
+          <span class="track-line left"></span>
+          <span class="track-line center"></span>
+          <span class="track-line right"></span>
+          ${otherCar ? `<span class="rival-car" title="${escapeHtml(otherCar.name)}"></span>` : ""}
+        </div>
+        <div class="player-f1-car">
+          <span class="rear-wing"></span>
+          <span class="car-body"></span>
+          <span class="wheel left"></span>
+          <span class="wheel right"></span>
+        </div>
+        <div class="race-speed">${speedKmh}<small>km/h</small></div>
+      </div>
+      <div class="racing-panels">
+        ${renderRaceMember(me, room.players.findIndex((player) => player.id === me?.id), myCar)}
+        ${renderRaceMember(room.players.find((player) => player.id !== state.playerId), room.players.findIndex((player) => player.id !== state.playerId), otherCar)}
+        <div class="racing-controls">
+          <strong>操作</strong>
+          <span><kbd>W</kbd> 前进 <kbd>S</kbd> 刹车</span>
+          <span><kbd>A</kbd>/<kbd>D</kbd> 转向 <kbd>Space</kbd> 手刹 <kbd>Shift</kbd> 氮气</span>
+        </div>
+        <div class="racing-progress">
+          <strong>${myLap}/${targetLaps} 圈</strong>
+          <div><span style="width:${progress}%"></span></div>
+          <small>对手：${otherLap}/${targetLaps} 圈</small>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (!raceFinished) {
+    startCountdown(race.deadlineAt || room.game.deadlineAt);
+    ensureRaceControlLoop();
+  } else {
+    stopRaceControlLoop();
+  }
+}
+
+function renderRaceMember(player, index, car) {
+  if (!player) {
+    return `
+      <div class="racing-member empty">
+        <div class="player-avatar">?</div>
+        <strong>${(index < 0 ? 1 : index) + 1}P 等待车手</strong>
+        <span>未在线</span>
+      </div>
+    `;
+  }
+  const lapText = car ? `${Math.min(8, Math.floor(car.distance || 0))}/8 圈 · ${Math.round((car.speed || 0) * 7200)} km/h` : player.ready ? "已准备" : "未准备";
+  return `
+    <div class="racing-member">
+      <div class="player-avatar">${avatarMarkup(player.name, player.avatar)}</div>
+      <strong>${(index < 0 ? 0 : index) + 1}P ${escapeHtml(player.name)}</strong>
+      <span>${escapeHtml(lapText)}</span>
+    </div>
+  `;
+}
+
+function formatRaceClock(ms) {
+  const remaining = Math.max(0, Number(ms) || 0);
+  const minutes = String(Math.floor(remaining / 60000)).padStart(2, "0");
+  const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function keyToRaceControl(event) {
+  const key = event.key.toLowerCase();
+  if (key === "w") return "w";
+  if (key === "s") return "s";
+  if (key === "a") return "a";
+  if (key === "d") return "d";
+  if (key === " ") return "space";
+  if (key === "shift") return "shift";
+  return "";
+}
+
+function ensureRaceControlLoop() {
+  if (state.raceControlTimer) {
+    return;
+  }
+  state.raceControlTimer = setInterval(sendRaceControls, 120);
+}
+
+function stopRaceControlLoop() {
+  if (state.raceControlTimer) {
+    clearInterval(state.raceControlTimer);
+    state.raceControlTimer = null;
+  }
+  Object.keys(state.raceControls).forEach((key) => {
+    state.raceControls[key] = false;
+  });
+}
+
+async function sendRaceControls() {
+  if (!state.roomCode || state.gameId !== "3" || state.lastRoom?.game?.status !== "playing") {
+    stopRaceControlLoop();
+    return;
+  }
+  try {
+    await api(`/api/rooms/${state.roomCode}/race-control`, {
+      method: "POST",
+      body: { playerId: state.playerId, controls: state.raceControls },
+    });
+  } catch (error) {
+    setStatus(lobbyStatus, error.message, true);
+  }
+}
+
 function connectEvents() {
   if (state.events) {
     state.events.close();
@@ -810,6 +999,7 @@ logoutAccount.addEventListener("click", async () => {
   }
   clearCountdown();
   clearTransientTimer();
+  stopRaceControlLoop();
   stopCameraStream();
   state.account = null;
   state.playerId = "";
@@ -1011,6 +1201,7 @@ leaveRoom.addEventListener("click", async () => {
   }
   clearCountdown();
   clearTransientTimer();
+  stopRaceControlLoop();
   stopCameraStream();
   state.roomCode = "";
   state.ready = false;
@@ -1019,6 +1210,7 @@ leaveRoom.addEventListener("click", async () => {
   document.body.dataset.game = "";
   gameStage.classList.remove("math-stage");
   gameStage.classList.remove("gomoku-stage");
+  gameStage.classList.remove("racing-stage");
   lobbyPanel.classList.add("hidden");
   showSetup();
   history.replaceState({}, "", `${location.origin}${location.pathname}`);
