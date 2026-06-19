@@ -663,6 +663,55 @@ function renderUndoPanel(room, me) {
   return "";
 }
 
+function raceTrackPoint(distance) {
+  const progress = ((Number(distance) || 0) % 1 + 1) % 1;
+  const angle = Math.PI * 2 * (progress - 0.25);
+  const x = 100 + Math.cos(angle) * 76 + Math.sin(angle * 2) * 10;
+  const y = 66 + Math.sin(angle) * 46;
+  return { x, y, angle };
+}
+
+function raceCurve(distance) {
+  const progress = ((Number(distance) || 0) % 1 + 1) % 1;
+  return Math.sin(progress * Math.PI * 2) * 0.72 + Math.sin(progress * Math.PI * 6) * 0.24;
+}
+
+function raceGapText(myCar, otherCar) {
+  if (!myCar || !otherCar) {
+    return "等待对手";
+  }
+  const gap = (otherCar.distance || 0) - (myCar.distance || 0);
+  const meters = Math.round(Math.abs(gap) * 5200);
+  if (Math.abs(gap) < 0.01) {
+    return "对手并排行驶";
+  }
+  return gap > 0 ? `对手在前方约 ${meters} 米` : `对手在后方约 ${meters} 米`;
+}
+
+function renderRaceMiniMap(race, myCar, otherCar) {
+  const mePoint = raceTrackPoint(myCar?.distance || 0);
+  const rivalPoint = raceTrackPoint(otherCar?.distance || 0);
+  const lap = Math.min(race?.targetLaps || 8, Math.floor(myCar?.distance || 0));
+  return `
+    <div class="race-minimap" aria-label="赛道小地图">
+      <div class="minimap-title">
+        <strong>小地图</strong>
+        <span>${lap}/${race?.targetLaps || 8} 圈</span>
+      </div>
+      <svg viewBox="0 0 200 132" role="img" aria-label="赛车位置">
+        <path class="minimap-track-shadow" d="M99 17 C158 14 185 42 178 73 C169 112 111 122 62 111 C19 102 13 63 37 37 C51 22 73 17 99 17Z" />
+        <path class="minimap-track" d="M99 17 C158 14 185 42 178 73 C169 112 111 122 62 111 C19 102 13 63 37 37 C51 22 73 17 99 17Z" />
+        <circle class="minimap-dot me" cx="${mePoint.x.toFixed(1)}" cy="${mePoint.y.toFixed(1)}" r="5.4" />
+        ${otherCar ? `<circle class="minimap-dot rival" cx="${rivalPoint.x.toFixed(1)}" cy="${rivalPoint.y.toFixed(1)}" r="5.4" />` : ""}
+      </svg>
+      <div class="minimap-legend">
+        <span><i class="me"></i>我</span>
+        <span><i class="rival"></i>对手</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderRacingArea(room, allReady) {
   const race = room.game?.race;
   if (!room.game || room.game.status === "lobby" || !race) {
@@ -697,9 +746,15 @@ function renderRacingArea(room, allReady) {
   const lane = Number(myCar?.lane || 0).toFixed(3);
   const heading = Number(myCar?.heading || 0).toFixed(2);
   const gap = otherCar ? Math.max(-0.5, Math.min(0.5, (otherCar.distance || 0) - (myCar?.distance || 0))) : 0;
-  const carLeft = 50 + Number(lane) * 24;
-  const rivalLeft = 50 + gap * 42;
-  const rivalTop = 32 - gap * 70;
+  const curve = raceCurve(myCar?.distance || 0);
+  const trackShift = curve * 9;
+  const trackRotate = curve * -4;
+  const horizonShift = curve * 7;
+  const carLeft = 50 + Number(lane) * 24 - curve * 7;
+  const rivalLeft = otherCar ? 50 + Number(otherCar.lane || 0) * 20 + gap * 18 - curve * 8 : 50;
+  const rivalTop = otherCar ? Math.max(15, Math.min(82, 58 - gap * 90)) : 32;
+  const rivalScale = otherCar ? Math.max(0.62, Math.min(1.25, 0.86 + gap * 0.55)) : 1;
+  const directionText = raceGapText(myCar, otherCar);
   const raceFinished = room.game.status === "finished";
 
   gameStage.innerHTML = `
@@ -711,14 +766,20 @@ function renderRacingArea(room, allReady) {
         </div>
         <strong id="roundTimer">${formatRaceClock((race.deadlineAt || room.game.deadlineAt) - (room.game.serverNow || Date.now()))}</strong>
       </div>
-      <div class="racing-viewport" style="--car-left:${carLeft}%; --rival-left:${rivalLeft}%; --rival-top:${rivalTop}%; --heading:${heading}deg; --progress:${progress}%;">
+      <div class="racing-viewport" style="--car-left:${carLeft}%; --rival-left:${rivalLeft}%; --rival-top:${rivalTop}%; --rival-scale:${rivalScale}; --heading:${heading}deg; --progress:${progress}%; --track-shift:${trackShift}%; --track-rotate:${trackRotate}deg; --horizon-shift:${horizonShift}%;">
         <div class="race-skyline"></div>
+        ${renderRaceMiniMap(race, myCar, otherCar)}
+        <div class="race-direction ${gap >= 0 ? "ahead" : "behind"}">
+          <span></span>
+          <strong>${escapeHtml(directionText)}</strong>
+        </div>
         <div class="race-track-perspective">
           <span class="track-line left"></span>
           <span class="track-line center"></span>
           <span class="track-line right"></span>
-          ${otherCar ? `<span class="rival-car" title="${escapeHtml(otherCar.name)}"></span>` : ""}
+          ${otherCar ? `<span class="rival-car" title="${escapeHtml(otherCar.name)}"><i>${escapeHtml(otherCar.name)}</i></span>` : ""}
         </div>
+        <div class="track-corner-sign">弯道 ${curve > 0.16 ? "右" : curve < -0.16 ? "左" : "直线"}</div>
         <div class="player-f1-car">
           <span class="rear-wing"></span>
           <span class="car-body"></span>

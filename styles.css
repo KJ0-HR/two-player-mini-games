@@ -2918,6 +2918,10 @@ html body[data-view="lobby"][data-game="3"] .lobby-actions button {
     radial-gradient(circle at 50% 18%, rgba(255, 236, 166, 0.22), transparent 24%),
     linear-gradient(180deg, rgba(4, 7, 12, 0.06), rgba(4, 7, 12, 0.72)),
     url("./assets/game-racing.png") center center / cover no-repeat;
+  background-position:
+    center center,
+    center center,
+    calc(50% + var(--horizon-shift, 0%)) center;
   box-shadow: inset 0 -120px 140px rgba(0, 0, 0, 0.48), 0 30px 90px rgba(0, 0, 0, 0.36);
 }
 
@@ -2929,18 +2933,19 @@ html body[data-view="lobby"][data-game="3"] .lobby-actions button {
 
 .race-track-perspective {
   position: absolute;
-  left: 50%;
+  left: calc(50% + var(--track-shift, 0%));
   bottom: -12%;
   width: min(86vw, 980px);
   height: 76%;
-  transform: translateX(-50%) perspective(760px) rotateX(62deg);
+  transform: translateX(-50%) perspective(760px) rotateX(62deg) rotateZ(var(--track-rotate, 0deg));
   transform-origin: bottom center;
-  clip-path: polygon(43% 0, 57% 0, 96% 100%, 4% 100%);
+  clip-path: polygon(42% 0, 58% 0, 98% 100%, 2% 100%);
   background:
     repeating-linear-gradient(90deg, transparent 0 47%, rgba(255, 255, 255, 0.72) 48% 52%, transparent 53% 100%),
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.18) 0 7px, transparent 7px 72px),
     linear-gradient(90deg, #1b1d21, #3b3d3e 50%, #15181c);
   opacity: 0.92;
+  transition: left 0.18s linear, transform 0.18s linear;
 }
 
 .track-line {
@@ -2964,6 +2969,23 @@ html body[data-view="lobby"][data-game="3"] .lobby-actions button {
   border-radius: 12px 12px 5px 5px;
   background: linear-gradient(180deg, #2b7dff, #071327);
   box-shadow: 0 0 18px rgba(72, 155, 255, 0.8);
+  transform: translate(-50%, -50%) scale(var(--rival-scale, 1));
+  transition: left 0.16s linear, top 0.16s linear, transform 0.16s linear;
+  z-index: 3;
+}
+
+.rival-car i {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #eaf5ff;
+  background: rgba(5, 12, 28, 0.72);
+  font-size: 12px;
+  font-style: normal;
+  white-space: nowrap;
 }
 
 .player-f1-car {
@@ -3037,6 +3059,141 @@ html body[data-view="lobby"][data-game="3"] .lobby-actions button {
   text-transform: uppercase;
 }
 
+.race-minimap {
+  position: absolute;
+  right: 22px;
+  top: 22px;
+  z-index: 6;
+  width: min(230px, 30vw);
+  padding: 12px;
+  border: 1px solid rgba(255, 217, 145, 0.34);
+  border-radius: 18px;
+  color: #fff2cf;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 48%),
+    rgba(5, 7, 12, 0.66);
+  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(12px);
+}
+
+.minimap-title,
+.minimap-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.minimap-title span,
+.minimap-legend {
+  color: rgba(255, 242, 207, 0.72);
+}
+
+.race-minimap svg {
+  width: 100%;
+  height: auto;
+  margin: 6px 0;
+  overflow: visible;
+}
+
+.minimap-track-shadow {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.42);
+  stroke-width: 18;
+  stroke-linecap: round;
+}
+
+.minimap-track {
+  fill: none;
+  stroke: rgba(255, 231, 168, 0.78);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 2 12;
+}
+
+.minimap-dot {
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
+}
+
+.minimap-dot.me,
+.minimap-legend i.me {
+  fill: #f02f39;
+  background: #f02f39;
+}
+
+.minimap-dot.rival,
+.minimap-legend i.rival {
+  fill: #2b7dff;
+  background: #2b7dff;
+}
+
+.minimap-legend span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.minimap-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.race-direction {
+  position: absolute;
+  left: 24px;
+  top: 22px;
+  z-index: 6;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  max-width: min(360px, calc(100% - 290px));
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 217, 145, 0.32);
+  border-radius: 999px;
+  color: #fff2cf;
+  background: rgba(5, 7, 12, 0.58);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.race-direction span {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid #f0c866;
+}
+
+.race-direction.behind span {
+  transform: rotate(180deg);
+  border-bottom-color: #69a7ff;
+}
+
+.race-direction strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-corner-sign {
+  position: absolute;
+  left: 50%;
+  top: 88px;
+  z-index: 5;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 217, 145, 0.28);
+  border-radius: 999px;
+  color: #ffe7a8;
+  background: rgba(5, 7, 12, 0.42);
+  backdrop-filter: blur(8px);
+  font-weight: 800;
+}
+
 .racing-panels {
   z-index: 3;
   display: grid;
@@ -3099,6 +3256,27 @@ html body[data-view="lobby"][data-game="3"] .lobby-actions button {
 
   .racing-viewport {
     min-height: 52vh;
+  }
+
+  .race-minimap {
+    right: 12px;
+    top: 12px;
+    width: 156px;
+    padding: 9px;
+  }
+
+  .race-direction {
+    left: 12px;
+    top: auto;
+    bottom: 12px;
+    max-width: calc(100% - 190px);
+    padding: 9px 11px;
+    font-size: 13px;
+  }
+
+  .track-corner-sign {
+    top: 70px;
+    font-size: 13px;
   }
 
   .racing-member {
