@@ -1,5 +1,5 @@
 const gameNames = {
-  1: "游戏 1：数学计算能力",
+  1: "游戏 1：数学竞赛",
   2: "游戏 2：五子棋对决",
   3: "游戏 3：赛车竞速",
   4: "游戏 4：待接入",
@@ -39,6 +39,9 @@ const lobbyPanel = document.querySelector("#lobbyPanel");
 const roomForm = document.querySelector("#roomForm");
 const gameId = document.querySelector("#gameId");
 const gameTiles = document.querySelectorAll(".game-slice");
+const mathConfigPanel = document.querySelector("#mathConfigPanel");
+const mathSubject = document.querySelector("#mathSubject");
+const mathDifficulty = document.querySelector("#mathDifficulty");
 const roomCode = document.querySelector("#roomCode");
 const setupStatus = document.querySelector("#setupStatus");
 const accountLabel = document.querySelector("#accountLabel");
@@ -74,6 +77,7 @@ function syncSelectedGame() {
   gameTiles.forEach((tile) => {
     tile.classList.toggle("active", tile.dataset.game === gameId.value);
   });
+  mathConfigPanel?.classList.toggle("hidden", gameId.value !== "1");
 }
 
 function updateVisualMotion() {
@@ -196,6 +200,12 @@ async function enterRoom(action) {
     gameId: gameId.value,
     roomCode: code,
   };
+  if (action === "create" && gameId.value === "1") {
+    payload.mathSettings = {
+      subject: mathSubject?.value || "calculus",
+      difficulty: mathDifficulty?.value || "easy",
+    };
+  }
 
   try {
     setStatus(setupStatus, action === "create" ? `正在创建房间 ${code}...` : "正在加入房间...");
@@ -267,7 +277,7 @@ function renderRoom(room) {
 
   const allReady = room.players.length === 2 && room.players.every((player) => player.ready);
   const gameStarted = room.gameId === "1"
-    ? room.game?.status === "playing" || room.game?.status === "between"
+    ? room.game?.status === "playing" || room.game?.status === "review"
     : room.gameId === "2"
       ? room.game?.status === "playing"
       : room.gameId === "3"
@@ -336,19 +346,16 @@ function renderGameArea(room, allReady) {
       <div class="stage-card">
         <strong>${allReady ? "两位玩家已准备" : "等待两位玩家进入并准备"}</strong>
         <span>${allReady ? "房主点击开始游戏后会出现第一题。" : `当前 ${room.players.length}/2 人在线`}</span>
+        <span>${renderMathSettingLine(room)}</span>
       </div>
     `;
     return;
   }
 
-  if (room.game.status === "between") {
+  if (room.game.status === "review") {
     gameStage.innerHTML = `
       ${renderMathRoomOverlay(room)}
-      <div class="math-game result-view">
-        <p class="math-label">第 ${room.game.round} 题结果</p>
-        <h3>${escapeHtml(room.game.lastResult?.message || "进入下一题")}</h3>
-        <p>正确答案：${formatAnswer(room.game.lastResult?.answer)}</p>
-      </div>
+      ${renderMathReviewPanel(room)}
     `;
     return;
   }
@@ -361,6 +368,7 @@ function renderGameArea(room, allReady) {
         <h3>${escapeHtml(room.game.lastResult?.message || "已分出胜负")}</h3>
         <p>胜利条件：先得到 ${room.game.targetScore || 10} 分</p>
         <p>最后一题答案：${formatAnswer(room.game.lastResult?.answer)}</p>
+        ${room.game.showExplanation && room.game.lastResult?.explanation ? `<div class="math-explanation">${escapeHtml(room.game.lastResult.explanation)}</div>` : ""}
       </div>
     `;
     return;
@@ -378,11 +386,7 @@ function renderGameArea(room, allReady) {
         </div>
         <p class="math-label">第 ${room.game.round} 题</p>
         <h3>${mathQuestionMarkup(room.game.question)}</h3>
-        <div class="answer-row">
-          <input id="answerInput" name="answer" autocomplete="off" inputmode="decimal" placeholder="填写答案" />
-          <button type="submit">提交</button>
-        </div>
-        <p class="math-tip">可填整数、小数或分数，例如 3/4。</p>
+        ${renderMathAnswerControl(room.game.question)}
       </form>
     `;
     document.querySelector("#answerInput")?.focus();
@@ -395,9 +399,10 @@ function renderMathRoomOverlay(room) {
   const targetScore = room.game?.targetScore || 10;
   return `
     <aside class="math-room-info" aria-label="数学房间信息">
-      <p class="math-label">数学房间</p>
+      <p class="math-label">数学竞赛</p>
       <h3>房间 ${escapeHtml(room.roomCode)}</h3>
       <span class="math-room-count">当前 ${room.players.length}/2 人在线</span>
+      <span class="math-room-count">${renderMathSettingLine(room)}</span>
       <div class="math-room-players">
         ${[0, 1].map((index) => renderMathRoomPlayer(room, index, targetScore)).join("")}
       </div>
@@ -419,7 +424,7 @@ function renderMathRoomPlayer(room, index, targetScore) {
     `;
   }
   const score = room.game?.scores?.[player.id] || 0;
-  const status = room.game?.status === "playing" || room.game?.status === "between" || room.game?.status === "finished"
+  const status = room.game?.status === "playing" || room.game?.status === "review" || room.game?.status === "finished"
     ? `${score}/${targetScore} 分`
     : player.ready ? "已准备" : "未准备";
   return `
@@ -465,11 +470,72 @@ function startCountdown(deadlineAt) {
 }
 
 function formatAnswer(value) {
-  return Number.isFinite(Number(value)) ? Number(value).toLocaleString("zh-CN", { maximumFractionDigits: 6 }) : "--";
+  if (value === undefined || value === null || value === "") {
+    return "--";
+  }
+  return Number.isFinite(Number(value)) ? Number(value).toLocaleString("zh-CN", { maximumFractionDigits: 6 }) : escapeHtml(String(value));
 }
 
 function mathQuestionMarkup(question) {
   return question?.html || escapeHtml(question?.text || "");
+}
+
+function renderMathAnswerControl(question) {
+  if (question?.type === "choice") {
+    return `
+      <div class="choice-options">
+        ${(question.choices || []).map((option) => `
+          <label class="choice-option">
+            <input type="radio" name="answerChoice" value="${escapeHtml(option.value)}" />
+            <span>${escapeHtml(option.value)}. ${escapeHtml(option.label)}</span>
+          </label>
+        `).join("")}
+      </div>
+      <div class="answer-row choice-submit-row">
+        <button type="submit">提交选择</button>
+      </div>
+      <p class="math-tip">这一题答案较难键盘输入，请选择最合适的一项。</p>
+    `;
+  }
+
+  return `
+    <div class="answer-row">
+      <input id="answerInput" name="answer" autocomplete="off" inputmode="decimal" placeholder="填写答案" />
+      <button type="submit">提交</button>
+    </div>
+    <p class="math-tip">可填整数、小数或分数，例如 3/4。</p>
+  `;
+}
+
+function renderMathReviewPanel(room) {
+  const votes = room.game.explanationVotes || {};
+  const myVote = votes[state.playerId];
+  const voteCount = room.players.filter((player) => votes[player.id]).length;
+  return `
+    <div class="math-game result-view">
+      <p class="math-label">第 ${room.game.round} 题结果</p>
+      <h3>${escapeHtml(room.game.lastResult?.message || "进入下一题")}</h3>
+      <p>正确答案：${formatAnswer(room.game.lastResult?.answer)}</p>
+      <div class="math-review-vote">
+        <strong>是否查看解析？</strong>
+        <span>双方都选择 Yes 才会显示解析。当前 ${voteCount}/2 已选择。</span>
+        <div class="review-actions">
+          <button type="button" data-review-vote="yes" ${myVote ? "disabled" : ""}>Yes</button>
+          <button type="button" class="secondary" data-review-vote="no" ${myVote ? "disabled" : ""}>No</button>
+        </div>
+        ${myVote ? `<em>你已选择 ${myVote === "yes" ? "Yes" : "No"}</em>` : ""}
+      </div>
+      ${room.game.showExplanation && room.game.lastResult?.explanation ? `<div class="math-explanation">${escapeHtml(room.game.lastResult.explanation)}</div>` : ""}
+    </div>
+  `;
+}
+
+function renderMathSettingLine(room) {
+  const settings = room.game?.mathSettings;
+  if (!settings) {
+    return "线性代数 / 高等数学 · 先到 10 分";
+  }
+  return `${escapeHtml(settings.subjectLabel)} · ${escapeHtml(settings.difficultyLabel)} · 每题 ${Math.round((settings.roundMs || 0) / 60000)} 分钟`;
 }
 
 function renderGomokuArea(room, allReady) {
@@ -1119,6 +1185,20 @@ readyToggle.addEventListener("click", async () => {
 });
 
 gameStage.addEventListener("click", async (event) => {
+  const reviewVote = event.target.closest("[data-review-vote]");
+  if (reviewVote) {
+    try {
+      const room = await api(`/api/rooms/${state.roomCode}/explanation-vote`, {
+        method: "POST",
+        body: { playerId: state.playerId, vote: reviewVote.dataset.reviewVote },
+      });
+      renderRoom(room);
+    } catch (error) {
+      setStatus(lobbyStatus, error.message, true);
+    }
+    return;
+  }
+
   const cell = event.target.closest(".gomoku-cell");
   if (cell) {
     try {
@@ -1230,9 +1310,10 @@ gameStage.addEventListener("submit", async (event) => {
   }
   event.preventDefault();
   const answerInput = document.querySelector("#answerInput");
-  const answer = answerInput?.value.trim() || "";
+  const choiceInput = document.querySelector("input[name='answerChoice']:checked");
+  const answer = answerInput?.value.trim() || choiceInput?.value || "";
   if (!answer) {
-    setStatus(lobbyStatus, "请先填写答案。", true);
+    setStatus(lobbyStatus, "请先填写或选择答案。", true);
     return;
   }
 

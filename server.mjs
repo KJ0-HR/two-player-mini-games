@@ -15,9 +15,20 @@ const supabaseServiceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 const accountStore = supabaseUrl && supabaseServiceKey ? "supabase" : "file";
 const port = Number(process.env.PORT || 5177);
 const rooms = new Map();
-const ROUND_MS = 60000;
-const NEXT_ROUND_DELAY_MS = 1600;
 const MATH_TARGET_SCORE = 10;
+const MATH_REVIEW_AUTO_NEXT_MS = 30000;
+const MATH_EXPLANATION_SHOW_MS = 10000;
+const MATH_NO_EXPLANATION_DELAY_MS = 1600;
+const MATH_SUBJECTS = {
+  linear: "线性代数",
+  calculus: "高等数学",
+};
+const MATH_DIFFICULTIES = {
+  easy: { label: "简单", roundMs: 2 * 60 * 1000 },
+  medium: { label: "中等", roundMs: 5 * 60 * 1000 },
+  hard: { label: "难", roundMs: 10 * 60 * 1000 },
+  contest: { label: "竞赛题", roundMs: 20 * 60 * 1000 },
+};
 const GOMOKU_SIZE = 25;
 const GOMOKU_TURN_MS = 4 * 60 * 1000;
 const RACE_TARGET_LAPS = 8;
@@ -306,10 +317,16 @@ function publicRoom(room) {
               text: room.game.question.text,
               html: room.game.question.html,
               level: room.game.question.level,
+              type: room.game.question.type || "input",
+              choices: room.game.question.choices || [],
             }
           : null,
         scores: Object.fromEntries(room.players.map((player) => [player.id, room.game.scores[player.id] || 0])),
         targetScore: room.game.targetScore || null,
+        mathSettings: room.game.mathSettings ? publicMathSettings(room.game.mathSettings) : null,
+        roundMs: room.game.roundMs || null,
+        explanationVotes: room.game.explanationVotes || {},
+        showExplanation: Boolean(room.game.showExplanation),
         lastResult: room.game.lastResult,
         board: room.game.board || null,
         currentPlayerId: room.game.currentPlayerId || null,
@@ -366,6 +383,10 @@ function createGameState() {
     deadlineAt: null,
     scores: {},
     lastResult: null,
+    mathSettings: normalizeMathSettings(),
+    roundMs: MATH_DIFFICULTIES.easy.roundMs,
+    explanationVotes: {},
+    showExplanation: false,
     timer: null,
     nextTimer: null,
     chatBubbles: [],
@@ -464,144 +485,239 @@ function mathHtml(content) {
   return `<span class="math-expression">${content}</span>`;
 }
 
-function generateMathQuestion(round) {
-  const advancedTemplates = [
-    () => {
-      const a = randomInt(1, 5);
-      const b = randomInt(-6, 6);
-      const c = randomInt(-8, 8);
-      const x = randomInt(-3, 4);
-      return {
-        text: `设 f(x) = ${a}x³ ${signedTerm(b, "x²")} ${signedTerm(c, "x")}，求 f′(${x}) = ?`,
-        html: mathHtml(`设 f(x) = ${a}x<sup>3</sup> ${signedTermHtml(b, "x<sup>2</sup>")} ${signedTermHtml(c, "x")}，求 f′(${x}) = ?`),
-        answer: 3 * a * x * x + 2 * b * x + c,
-        level: "高等数学：导数",
-      };
-    },
-    () => {
-      const a = choice([2, 4, 6, 8]);
-      const b = randomInt(-6, 8);
-      const upper = randomInt(1, 6);
-      return {
-        text: `计算定积分：∫₀^${upper} (${a}x ${signedTerm(b)}) dx = ?`,
-        html: mathHtml(`计算定积分：∫<sub>0</sub><sup>${upper}</sup> (${a}x ${signedTermHtml(b)}) dx = ?`),
-        answer: roundAnswer((a * upper * upper) / 2 + b * upper),
-        level: "高等数学：定积分",
-      };
-    },
-    () => {
-      const a = randomInt(1, 4);
-      const b = randomInt(-5, 5);
-      const upper = randomInt(1, 5);
-      return {
-        text: `计算定积分：∫₀^${upper} (${a}x² ${signedTerm(b, "x")}) dx = ?`,
-        html: mathHtml(`计算定积分：∫<sub>0</sub><sup>${upper}</sup> (${a}x<sup>2</sup> ${signedTermHtml(b, "x")}) dx = ?`),
-        answer: roundAnswer((a * upper ** 3) / 3 + (b * upper ** 2) / 2),
-        level: "高等数学：定积分",
-      };
-    },
-    () => {
-      const a = randomInt(1, 5);
-      const b = randomInt(-5, 5);
-      const x = randomInt(-3, 4);
-      return {
-        text: `设 F(x) = ${a}x⁴ ${signedTerm(b, "x²")}，求 F″(${x}) = ?`,
-        html: mathHtml(`设 F(x) = ${a}x<sup>4</sup> ${signedTermHtml(b, "x<sup>2</sup>")}，求 F″(${x}) = ?`),
-        answer: 12 * a * x * x + 2 * b,
-        level: "高等数学：二阶导数",
-      };
-    },
-    () => {
-      const a = randomInt(1, 5);
-      const b = randomInt(1, 6);
-      return {
-        text: `计算极限：limₓ→0 (sin(${a}x) / (${b}x)) = ?`,
-        html: mathHtml(`计算极限：lim<sub>x→0</sub> ${fractionHtml(`sin(${a}x)`, `${b}x`)} = ?`),
-        answer: roundAnswer(a / b),
-        level: "高等数学：极限",
-      };
-    },
-    () => {
-      const a = randomInt(1, 5);
-      const b = randomInt(1, 5);
-      return {
-        text: `计算极限：limₓ→0 ((1 + ${a}x)^(1/x))，结果为 e 的多少次方？`,
-        html: mathHtml(`计算极限：lim<sub>x→0</sub> (1 + ${a}x)<sup>1/x</sup>，结果为 e 的多少次方？`),
-        answer: a,
-        level: "高等数学：重要极限",
-      };
-    },
-    () => {
-      const a = randomInt(-5, 6);
-      const b = randomInt(-5, 6);
-      const c = randomInt(-5, 6);
-      const d = randomInt(-5, 6);
-      return {
-        text: `求二阶行列式：| ${a}  ${b};  ${c}  ${d} | = ?`,
-        html: mathHtml(`求二阶行列式：<span class="math-det"><span>${a}</span><span>${b}</span><span>${c}</span><span>${d}</span></span> = ?`),
-        answer: a * d - b * c,
-        level: "线性代数：行列式",
-      };
-    },
-    () => {
-      const a = randomInt(1, 6);
-      const d = randomInt(1, 6);
-      return {
-        text: `矩阵 A = diag(${a}, ${d})，求 tr(A) = ?`,
-        html: mathHtml(`矩阵 A = diag(${a}, ${d})，求 tr(A) = ?`),
-        answer: a + d,
-        level: "线性代数：矩阵迹",
-      };
-    },
-    () => {
-      const n = randomInt(2, 8);
-      return {
-        text: `级数 Σₖ₌₁^${n} k² = ?`,
-        html: mathHtml(`级数 ∑<sub>k=1</sub><sup>${n}</sup> k<sup>2</sup> = ?`),
-        answer: (n * (n + 1) * (2 * n + 1)) / 6,
-        level: "高等数学：级数",
-      };
-    },
-    () => {
-      const a = randomInt(2, 6);
-      const b = randomInt(2, 6);
-      return {
-        text: `设 z = ${a} + ${b}i，求 |z|² = ?`,
-        html: mathHtml(`设 z = ${a} + ${b}i，求 |z|<sup>2</sup> = ?`),
-        answer: a * a + b * b,
-        level: "复变函数：复数模",
-      };
-    },
-    () => {
-      const lambda = randomInt(2, 6);
-      const k = randomInt(1, 5);
-      return {
-        text: `求导：d/dx [${k}e^(${lambda}x)] 在 x = 0 处的值 = ?`,
-        html: mathHtml(`求导：${fractionHtml("d", "dx")} [${k}e<sup>${lambda}x</sup>] 在 x = 0 处的值 = ?`),
-        answer: k * lambda,
-        level: "高等数学：指数函数求导",
-      };
-    },
-    () => {
-      const a = randomInt(1, 5);
-      const b = randomInt(1, 5);
-      return {
-        text: `求偏导：设 f(x,y) = ${a}x²y + ${b}xy²，求 ∂f/∂x 在 (1,1) 处的值 = ?`,
-        html: mathHtml(`求偏导：设 f(x,y) = ${a}x<sup>2</sup>y + ${b}xy<sup>2</sup>，求 ${fractionHtml("∂f", "∂x")} 在 (1,1) 处的值 = ?`),
-        answer: 2 * a + b,
-        level: "高等数学：偏导数",
-      };
-    },
-  ];
+function normalizeMathSettings(settings = {}) {
+  const subject = MATH_SUBJECTS[settings.subject] ? settings.subject : "calculus";
+  const difficulty = MATH_DIFFICULTIES[settings.difficulty] ? settings.difficulty : "easy";
+  return { subject, difficulty };
+}
 
-  const question = choice(advancedTemplates)();
+function publicMathSettings(settings = {}) {
+  const normalized = normalizeMathSettings(settings);
+  const difficulty = MATH_DIFFICULTIES[normalized.difficulty];
+  return {
+    ...normalized,
+    subjectLabel: MATH_SUBJECTS[normalized.subject],
+    difficultyLabel: difficulty.label,
+    roundMs: difficulty.roundMs,
+  };
+}
+
+function buildMathQuestion(round, settings, question) {
+  const publicSettings = publicMathSettings(settings);
   return {
     id: `${Date.now()}-${round}-${randomInt(1000, 9999)}`,
-    text: question.hint ? `${question.text}（${question.hint}）` : question.text,
-    html: question.html || question.text,
-    level: question.level,
-    answer: roundAnswer(question.answer),
+    text: question.text,
+    html: question.html || mathHtml(question.text),
+    level: `${publicSettings.subjectLabel} · ${publicSettings.difficultyLabel}`,
+    type: question.type || "input",
+    choices: question.choices || [],
+    answer: question.answer,
+    answerLabel: question.answerLabel ?? String(question.answer),
+    explanation: question.explanation || "本题解析待补充。",
   };
+}
+
+function generateMathQuestion(round, settings = {}) {
+  const normalized = normalizeMathSettings(settings);
+  const pools = {
+    linear: {
+      easy: [
+        () => {
+          const a = randomInt(1, 5);
+          const b = randomInt(-4, 4);
+          const c = randomInt(-4, 4);
+          const d = randomInt(1, 5);
+          const answer = a * d - b * c;
+          return {
+            text: `线性变换 T 的矩阵为 A = [[${a}, ${b}], [${c}, ${d}]]。单位正方形经 T 变换后的有向面积是多少？`,
+            html: mathHtml(`线性变换 T 的矩阵为 A = ${matrixHtml([[a, b], [c, d]])}。单位正方形经 T 变换后的有向面积是多少？`),
+            answer,
+            explanation: `二维线性变换对有向面积的缩放倍数等于 det(A)，所以答案为 ${a}×${d} - ${b}×${c} = ${answer}。`,
+          };
+        },
+        () => {
+          const x = randomInt(-3, 5);
+          const y = randomInt(-3, 5);
+          const p = x + y;
+          const q = x - y;
+          return {
+            text: `向量 v = (x,y) 同时满足 x + y = ${p}，x - y = ${q}。求 x 的值。`,
+            html: mathHtml(`向量 v = (x,y) 同时满足 x + y = ${p}，x - y = ${q}。求 x 的值。`),
+            answer: x,
+            explanation: `两式相加得 2x = ${p + q}，因此 x = ${x}。`,
+          };
+        },
+      ],
+      medium: [
+        () => {
+          const a = randomInt(1, 4);
+          const b = randomInt(1, 4);
+          const answer = a * a + b * b;
+          return {
+            text: `设 A = diag(${a}, ${b})，一个系统先作用 A 再作用 A。求复合变换矩阵 A² 的迹。`,
+            html: mathHtml(`设 A = diag(${a}, ${b})，一个系统先作用 A 再作用 A。求复合变换矩阵 A<sup>2</sup> 的迹。`),
+            answer,
+            explanation: `A² = diag(${a * a}, ${b * b})，迹为对角元之和 ${a * a} + ${b * b} = ${answer}。`,
+          };
+        },
+        () => {
+          const m = randomInt(1, 4);
+          const n = randomInt(1, 4);
+          return {
+            text: `在基 B = {(1,1),(1,-1)} 下，向量 v = (${m + n}, ${m - n})。求 v 的第一坐标。`,
+            html: mathHtml(`在基 B = {(1,1),(1,-1)} 下，向量 v = (${m + n}, ${m - n})。求 v 的第一坐标。`),
+            answer: m,
+            explanation: `若 v = α(1,1)+β(1,-1)，则 v = (α+β, α-β)。对照可得 α = ${m}。`,
+          };
+        },
+      ],
+      hard: [
+        () => ({
+          type: "choice",
+          text: "设 A 为 3 阶矩阵，特征值为 1, 1, 2，且 dim E_1 = 1。下面哪项正确？",
+          html: mathHtml("设 A 为 3 阶矩阵，特征值为 1, 1, 2，且 dim E<sub>1</sub> = 1。下面哪项正确？"),
+          choices: [
+            { value: "A", label: "A 一定可对角化" },
+            { value: "B", label: "A 不可对角化" },
+            { value: "C", label: "A 一定是对称矩阵" },
+            { value: "D", label: "A 的行列式为 1" },
+          ],
+          answer: "B",
+          answerLabel: "B",
+          explanation: "特征值 1 的代数重数为 2，但对应特征空间维数只有 1，特征向量总数不足 3 个，因此不可对角化。",
+        }),
+        () => ({
+          type: "choice",
+          text: "设 A 是 n 阶实矩阵且 A² = 0。以下哪项必然成立？",
+          html: mathHtml("设 A 是 n 阶实矩阵且 A<sup>2</sup> = 0。以下哪项必然成立？"),
+          choices: [
+            { value: "A", label: "A 的所有特征值都是 0" },
+            { value: "B", label: "A 一定是零矩阵" },
+            { value: "C", label: "A 一定可逆" },
+            { value: "D", label: "det(A) = 1" },
+          ],
+          answer: "A",
+          answerLabel: "A",
+          explanation: "若 λ 是 A 的特征值，则 λ² 是 A² 的特征值。A² = 0，所以 λ² = 0，故 λ = 0。",
+        }),
+      ],
+      contest: [
+        () => ({
+          type: "choice",
+          text: "设 A 为 n 阶幂等矩阵 A² = A，rank(A)=r。以下哪项必然正确？",
+          html: mathHtml("设 A 为 n 阶幂等矩阵 A<sup>2</sup> = A，rank(A)=r。以下哪项必然正确？"),
+          choices: [
+            { value: "A", label: "tr(A)=n-r" },
+            { value: "B", label: "tr(A)=0" },
+            { value: "C", label: "tr(A)=r" },
+            { value: "D", label: "det(A)=r" },
+          ],
+          answer: "C",
+          answerLabel: "C",
+          explanation: "幂等矩阵的特征值只能是 0 或 1，rank(A) 等于非零特征值个数，因此 tr(A)=r。",
+        }),
+      ],
+    },
+    calculus: {
+      easy: [
+        () => {
+          const a = randomInt(1, 4);
+          const b = randomInt(1, 6);
+          const x = randomInt(1, 4);
+          const answer = 2 * a * x + b;
+          return {
+            text: `某曲线位置函数为 f(x) = ${a}x² + ${b}x。求 x = ${x} 时的瞬时变化率。`,
+            html: mathHtml(`某曲线位置函数为 f(x) = ${a}x<sup>2</sup> + ${b}x。求 x = ${x} 时的瞬时变化率。`),
+            answer,
+            explanation: `瞬时变化率是导数。f′(x) = ${2 * a}x + ${b}，代入 x=${x} 得 ${answer}。`,
+          };
+        },
+        () => {
+          const upper = randomInt(2, 6);
+          const answer = fractionText(upper * upper, 2 * upper);
+          return {
+            text: `函数 f(x)=x 在区间 [0, ${upper}] 上的平均值是多少？`,
+            html: mathHtml(`函数 f(x)=x 在区间 [0, ${upper}] 上的平均值是多少？`),
+            answer,
+            answerLabel: answer,
+            explanation: `平均值为 1/${upper} × ∫_0^${upper} x dx = 1/${upper} × ${upper * upper}/2 = ${answer}。`,
+          };
+        },
+      ],
+      medium: [
+        () => ({
+          text: "区域由 y = x 与 y = x² 在 [0,1] 上围成。求该区域面积。",
+          html: mathHtml("区域由 y = x 与 y = x<sup>2</sup> 在 [0,1] 上围成。求该区域面积。"),
+          answer: "1/6",
+          answerLabel: "1/6",
+          explanation: "面积为 ∫_0^1 (x - x²) dx = 1/2 - 1/3 = 1/6。",
+        }),
+        () => {
+          const a = randomInt(2, 6);
+          return {
+            text: `若 f(x)=e^(${a}x)，其 Maclaurin 展开式中 x² 项系数是多少？`,
+            html: mathHtml(`若 f(x)=e<sup>${a}x</sup>，其 Maclaurin 展开式中 x<sup>2</sup> 项系数是多少？`),
+            answer: fractionText(a * a, 2),
+            answerLabel: fractionText(a * a, 2),
+            explanation: `e^(${a}x)=1+${a}x+(${a}x)²/2!+...，所以 x² 项系数为 ${a * a}/2。`,
+          };
+        },
+      ],
+      hard: [
+        () => ({
+          type: "choice",
+          text: "关于广义积分 ∫_1^∞ 1/x^p dx，下列哪项正确？",
+          html: mathHtml(`关于广义积分 ∫<sub>1</sub><sup>∞</sup> ${fractionHtml("1", "x<sup>p</sup>")} dx，下列哪项正确？`),
+          choices: [
+            { value: "A", label: "p > 1 时收敛" },
+            { value: "B", label: "p ≥ 0 时收敛" },
+            { value: "C", label: "p < 1 时收敛" },
+            { value: "D", label: "所有 p 都发散" },
+          ],
+          answer: "A",
+          answerLabel: "A",
+          explanation: "p 积分判别法：∫_1^∞ 1/x^p dx 当且仅当 p > 1 时收敛。",
+        }),
+        () => ({
+          type: "choice",
+          text: "函数 f(x,y)=x²+y² 在约束 x+y=2 下的最小值是多少？",
+          html: mathHtml("函数 f(x,y)=x<sup>2</sup>+y<sup>2</sup> 在约束 x+y=2 下的最小值是多少？"),
+          choices: [
+            { value: "A", label: "1" },
+            { value: "B", label: "2" },
+            { value: "C", label: "4" },
+            { value: "D", label: "不存在" },
+          ],
+          answer: "B",
+          answerLabel: "B",
+          explanation: "由对称性或拉格朗日乘子可得 x=y=1，最小值为 1²+1²=2。",
+        }),
+      ],
+      contest: [
+        () => ({
+          type: "choice",
+          text: "设 f 在 0 附近二阶可导，且 f(0)=0, f′(0)=0, f″(0)=6。lim_{x→0} f(x)/x² 等于多少？",
+          html: mathHtml(`设 f 在 0 附近二阶可导，且 f(0)=0, f′(0)=0, f″(0)=6。lim<sub>x→0</sub> ${fractionHtml("f(x)", "x<sup>2</sup>")} 等于多少？`),
+          choices: [
+            { value: "A", label: "0" },
+            { value: "B", label: "3" },
+            { value: "C", label: "6" },
+            { value: "D", label: "不存在" },
+          ],
+          answer: "B",
+          answerLabel: "B",
+          explanation: "二阶 Taylor 展开：f(x)=f″(0)x²/2+o(x²)=3x²+o(x²)，极限为 3。",
+        }),
+      ],
+    },
+  };
+
+  const pool = pools[normalized.subject][normalized.difficulty];
+  return buildMathQuestion(round, normalized, choice(pool)());
+}
+
+function matrixHtml(rows) {
+  return `<span class="math-matrix">${rows.map((row) => `<span>${row.join("&nbsp;&nbsp;")}</span>`).join("")}</span>`;
 }
 
 function parseAnswer(value) {
@@ -624,12 +740,29 @@ function parseAnswer(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function isCorrectAnswer(input, expected) {
+function isCorrectAnswer(input, question) {
+  if (question?.type === "choice") {
+    return String(input || "").trim().toUpperCase() === String(question.answer || "").trim().toUpperCase();
+  }
+
   const answer = parseAnswer(input);
+  const expected = parseAnswer(question?.answer ?? question);
   if (answer === null) {
     return false;
   }
+  if (expected === null) {
+    return false;
+  }
   return Math.abs(answer - expected) <= 0.000001;
+}
+
+function withMathResultDetails(room, result) {
+  const question = room.game.question || {};
+  return {
+    ...result,
+    answer: question.answerLabel ?? question.answer,
+    explanation: question.explanation || "",
+  };
 }
 
 function scheduleRoundTimeout(room) {
@@ -643,7 +776,6 @@ function scheduleRoundTimeout(room) {
     finishRound(room, {
       type: "timeout",
       message: "时间到，无人得分。",
-      answer: room.game.question.answer,
     });
   }, waitMs);
 }
@@ -655,6 +787,10 @@ function startMathGame(room) {
   room.game.lastResult = null;
   room.game.targetScore = MATH_TARGET_SCORE;
   room.game.winnerId = null;
+  room.game.mathSettings = normalizeMathSettings(room.game.mathSettings);
+  room.game.roundMs = publicMathSettings(room.game.mathSettings).roundMs;
+  room.game.explanationVotes = {};
+  room.game.showExplanation = false;
   room.game.scores = Object.fromEntries(room.players.map((player) => [player.id, 0]));
   nextQuestion(room);
 }
@@ -663,20 +799,26 @@ function nextQuestion(room) {
   clearGameTimers(room.game);
   room.game.status = "playing";
   room.game.round += 1;
-  room.game.question = generateMathQuestion(room.game.round);
-  room.game.deadlineAt = Date.now() + ROUND_MS;
+  room.game.mathSettings = normalizeMathSettings(room.game.mathSettings);
+  room.game.roundMs = publicMathSettings(room.game.mathSettings).roundMs;
+  room.game.question = generateMathQuestion(room.game.round, room.game.mathSettings);
+  room.game.deadlineAt = Date.now() + room.game.roundMs;
   room.game.lastResult = null;
+  room.game.explanationVotes = {};
+  room.game.showExplanation = false;
   scheduleRoundTimeout(room);
   broadcast(room);
 }
 
 function finishRound(room, result) {
   clearGameTimers(room.game);
-  room.game.status = "between";
-  room.game.lastResult = result;
+  room.game.status = "review";
+  room.game.lastResult = withMathResultDetails(room, result);
   room.game.deadlineAt = null;
+  room.game.explanationVotes = {};
+  room.game.showExplanation = false;
   broadcast(room);
-  room.game.nextTimer = setTimeout(() => nextQuestion(room), NEXT_ROUND_DELAY_MS);
+  room.game.nextTimer = setTimeout(() => nextQuestion(room), MATH_REVIEW_AUTO_NEXT_MS);
 }
 
 function finishMathGame(room, winner, result) {
@@ -684,13 +826,43 @@ function finishMathGame(room, winner, result) {
   room.game.status = "finished";
   room.game.winnerId = winner.id;
   room.game.deadlineAt = null;
-  room.game.lastResult = {
+  room.game.lastResult = withMathResultDetails(room, {
     ...result,
     type: "finished",
     winnerId: winner.id,
     message: `${winner.name} 先得到 ${MATH_TARGET_SCORE} 分，获得本局胜利。`,
-  };
+  });
+  room.game.explanationVotes = {};
+  room.game.showExplanation = false;
   broadcast(room);
+}
+
+function voteMathExplanation(room, player, vote) {
+  if (room.gameId !== "1" || !["review", "finished"].includes(room.game.status) || !room.game.lastResult) {
+    throw new Error("现在还不能选择是否查看解析。");
+  }
+
+  const normalizedVote = vote === "yes" ? "yes" : "no";
+  room.game.explanationVotes = room.game.explanationVotes || {};
+  room.game.explanationVotes[player.id] = normalizedVote;
+
+  const eligiblePlayers = room.players.slice(0, 2);
+  const allVoted = eligiblePlayers.length === 2 && eligiblePlayers.every((item) => room.game.explanationVotes[item.id]);
+  if (!allVoted) {
+    return;
+  }
+
+  if (room.game.nextTimer) {
+    clearTimeout(room.game.nextTimer);
+    room.game.nextTimer = null;
+  }
+
+  const bothYes = eligiblePlayers.every((item) => room.game.explanationVotes[item.id] === "yes");
+  room.game.showExplanation = bothYes;
+  if (room.game.status === "review") {
+    const delay = bothYes ? MATH_EXPLANATION_SHOW_MS : MATH_NO_EXPLANATION_DELAY_MS;
+    room.game.nextTimer = setTimeout(() => nextQuestion(room), delay);
+  }
 }
 
 function createRaceCar(player, index) {
@@ -1060,6 +1232,7 @@ function validatePayload(payload) {
     playerId: String(payload.playerId),
     playerName: String(payload.playerName || "玩家").slice(0, 12),
     playerAvatar: validateAvatarData(payload.playerAvatar || ""),
+    mathSettings: normalizeMathSettings(payload.mathSettings || {}),
   };
 }
 
@@ -1103,6 +1276,10 @@ async function handleApi(request, response, url) {
       return;
     }
     const room = { roomCode: payload.roomCode, gameId: payload.gameId, players: [], clients: new Set(), game: createGameState() };
+    if (payload.gameId === "1") {
+      room.game.mathSettings = payload.mathSettings;
+      room.game.roundMs = publicMathSettings(payload.mathSettings).roundMs;
+    }
     upsertPlayer(room, payload.playerId, payload.playerName, payload.playerAvatar);
     rooms.set(payload.roomCode, room);
     sendJson(response, 200, publicRoom(room));
@@ -1303,6 +1480,25 @@ async function handleApi(request, response, url) {
     return;
   }
 
+  const explanationVoteMatch = url.pathname.match(/^\/api\/rooms\/(\d{4})\/explanation-vote$/);
+  if (request.method === "POST" && explanationVoteMatch) {
+    const room = rooms.get(explanationVoteMatch[1]);
+    const payload = await readBody(request);
+    const player = room?.players.find((item) => item.id === payload.playerId);
+    if (!room || !player) {
+      sendJson(response, 404, { error: "玩家不在房间中。" });
+      return;
+    }
+    if (room.gameId !== "1") {
+      sendJson(response, 400, { error: "当前房间不是数学竞赛。" });
+      return;
+    }
+    voteMathExplanation(room, player, payload.vote);
+    sendJson(response, 200, publicRoom(room));
+    broadcast(room);
+    return;
+  }
+
   const answerMatch = url.pathname.match(/^\/api\/rooms\/(\d{4})\/answer$/);
   if (request.method === "POST" && answerMatch) {
     const room = rooms.get(answerMatch[1]);
@@ -1324,21 +1520,19 @@ async function handleApi(request, response, url) {
       finishRound(room, {
         type: "timeout",
         message: "时间到，无人得分。",
-        answer: room.game.question.answer,
       });
       sendJson(response, 200, publicRoom(room));
       return;
     }
 
     const opponent = room.players.find((item) => item.id !== player.id);
-    const correct = isCorrectAnswer(payload.answer, room.game.question.answer);
+    const correct = isCorrectAnswer(payload.answer, room.game.question);
     if (correct) {
       room.game.scores[player.id] = (room.game.scores[player.id] || 0) + 1;
       const result = {
         type: "correct",
         message: `${player.name} 答对了，获得 1 分。`,
         playerId: player.id,
-        answer: room.game.question.answer,
       };
       if (room.game.scores[player.id] >= MATH_TARGET_SCORE) {
         finishMathGame(room, player, result);
@@ -1353,7 +1547,6 @@ async function handleApi(request, response, url) {
         type: "wrong",
         message: opponent ? `${player.name} 答错了，${opponent.name} 获得 1 分。` : `${player.name} 答错了。`,
         playerId: player.id,
-        answer: room.game.question.answer,
       };
       if (opponent && room.game.scores[opponent.id] >= MATH_TARGET_SCORE) {
         finishMathGame(room, opponent, result);

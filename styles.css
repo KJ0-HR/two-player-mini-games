@@ -84,12 +84,47 @@ body[data-view="lobby"][data-game="1"] .stage.math-stage .result-view p {
   display: grid;
   place-items: center;
   padding: 28px;
+  overflow: hidden;
   color: #f4e4c5;
   background:
     linear-gradient(90deg, rgba(6, 7, 6, 0.62), rgba(6, 7, 6, 0.18) 46%, rgba(6, 7, 6, 0.5)),
     linear-gradient(180deg, rgba(8, 7, 6, 0.08), rgba(8, 7, 6, 0.45)),
     url("./assets/login-board.png") center center / cover no-repeat;
   transition: opacity 0.42s ease, visibility 0.42s ease;
+}
+
+.entry-cover::before,
+.entry-cover::after {
+  content: "";
+  position: absolute;
+  left: -24vw;
+  top: -2vh;
+  width: 148vw;
+  height: 42vh;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 10% 38%, rgba(255, 239, 216, 0.18) 0 9%, transparent 24%),
+    radial-gradient(ellipse at 28% 26%, rgba(255, 244, 226, 0.2) 0 8%, transparent 22%),
+    radial-gradient(ellipse at 48% 42%, rgba(244, 225, 204, 0.16) 0 10%, transparent 26%),
+    radial-gradient(ellipse at 70% 24%, rgba(255, 233, 202, 0.2) 0 9%, transparent 24%),
+    radial-gradient(ellipse at 90% 44%, rgba(246, 230, 211, 0.14) 0 10%, transparent 26%);
+  filter: blur(9px);
+  opacity: 0.52;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+  animation: entryCloudDrift 68s linear infinite;
+  will-change: transform;
+}
+
+.entry-cover::after {
+  top: 8vh;
+  height: 34vh;
+  opacity: 0.24;
+  filter: blur(14px);
+  transform: translate3d(8vw, 0, 0);
+  animation-name: entryCloudDriftReverse;
+  animation-duration: 96s;
 }
 
 body.entry-active {
@@ -109,6 +144,8 @@ body.entry-active .scene-layers {
 }
 
 .entry-cover-panel {
+  position: relative;
+  z-index: 1;
   display: grid;
   justify-items: center;
   padding: 0;
@@ -1914,6 +1951,71 @@ body[data-view="setup"] .room-form {
   transform: translate3d(var(--move-x), var(--move-y), 0) scale(1.13);
 }
 
+.math-config-panel {
+  position: absolute;
+  left: clamp(22px, 3.6vw, 56px);
+  right: clamp(22px, 3.6vw, 56px);
+  bottom: 116px;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(360px, 1.15fr);
+  gap: 16px;
+  align-items: end;
+  padding: 18px;
+  color: #f4ead7;
+  border: 1px solid rgba(255, 232, 178, 0.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(100deg, rgba(36, 27, 19, 0.72), rgba(12, 20, 14, 0.66)),
+    rgba(8, 12, 9, 0.64);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.math-config-panel.hidden {
+  display: none;
+}
+
+.math-config-panel h3,
+.math-config-panel p {
+  margin: 0;
+}
+
+.math-config-panel h3 {
+  margin-top: 4px;
+  font-family: "Noto Serif SC", "Times New Roman", serif;
+  font-size: clamp(24px, 2.3vw, 38px);
+  color: #fff4d3;
+}
+
+.math-config-panel p {
+  margin-top: 6px;
+  color: rgba(244, 234, 215, 0.72);
+}
+
+.math-config-kicker {
+  color: rgba(226, 194, 127, 0.96);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.math-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.math-config-panel .field {
+  color: rgba(244, 234, 215, 0.78);
+}
+
+.math-config-panel select {
+  color: #fff4d3;
+  border-color: rgba(255, 232, 178, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .slice-index,
 .game-slice strong {
   position: relative;
@@ -2150,6 +2252,90 @@ body[data-view="setup"] #setupStatus {
 
 .result-view {
   text-align: center;
+}
+
+.choice-options {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.choice-option {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 12px 14px;
+  color: #f8ebd2;
+  border: 1px solid rgba(255, 230, 174, 0.24);
+  border-radius: 12px;
+  background: rgba(7, 9, 23, 0.18);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.choice-option:hover,
+.choice-option:has(input:checked) {
+  border-color: rgba(255, 230, 174, 0.58);
+  background: rgba(228, 196, 127, 0.16);
+  transform: translateY(-1px);
+}
+
+.choice-option input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  accent-color: #e4c47f;
+}
+
+.choice-submit-row {
+  grid-template-columns: 1fr;
+  margin-top: 12px;
+}
+
+.math-review-vote {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  color: #f8ebd2;
+  border: 1px solid rgba(255, 230, 174, 0.24);
+  border-radius: 16px;
+  background: rgba(7, 9, 23, 0.18);
+}
+
+.math-review-vote strong,
+.math-review-vote span,
+.math-review-vote em {
+  display: block;
+}
+
+.math-review-vote span,
+.math-review-vote em {
+  color: rgba(248, 235, 210, 0.72);
+}
+
+.review-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.review-actions button {
+  min-width: 118px;
+}
+
+.math-explanation {
+  margin-top: 14px;
+  padding: 16px;
+  color: #fff4d6;
+  text-align: left;
+  line-height: 1.75;
+  border: 1px solid rgba(255, 230, 174, 0.24);
+  border-radius: 16px;
+  background: rgba(7, 9, 23, 0.22);
 }
 
 .gomoku-game {
@@ -2461,6 +2647,42 @@ body[data-view="setup"] #setupStatus {
   }
 }
 
+@keyframes raceCloudDrift {
+  from {
+    transform: translate3d(-6%, 0, 0);
+  }
+  to {
+    transform: translate3d(18%, 0, 0);
+  }
+}
+
+@keyframes raceCloudDriftReverse {
+  from {
+    transform: translate3d(14%, 0, 0);
+  }
+  to {
+    transform: translate3d(-12%, 0, 0);
+  }
+}
+
+@keyframes entryCloudDrift {
+  from {
+    transform: translate3d(-3vw, 0, 0);
+  }
+  to {
+    transform: translate3d(10vw, 0, 0);
+  }
+}
+
+@keyframes entryCloudDriftReverse {
+  from {
+    transform: translate3d(10vw, 0, 0);
+  }
+  to {
+    transform: translate3d(-5vw, 0, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -2658,6 +2880,19 @@ body[data-view="setup"] #setupStatus {
     right: auto;
     bottom: auto;
     margin: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .math-config-panel {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    grid-template-columns: 1fr;
+    margin: 12px;
+  }
+
+  .math-config-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2929,6 +3164,41 @@ html body[data-view="lobby"][data-game="3"] .lobby-actions button {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 0 44%, rgba(0, 0, 0, 0.42) 100%);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.race-skyline::before,
+.race-skyline::after {
+  content: "";
+  position: absolute;
+  left: -38%;
+  right: -38%;
+  height: 42%;
+  opacity: 0.42;
+  background-repeat: repeat-x;
+  background-size: 520px 100%, 390px 100%, 680px 100%;
+  filter: blur(0.4px);
+  will-change: transform;
+}
+
+.race-skyline::before {
+  top: 7%;
+  background-image:
+    radial-gradient(ellipse at 18% 54%, rgba(255, 248, 218, 0.32) 0 7%, transparent 18%),
+    radial-gradient(ellipse at 45% 42%, rgba(255, 247, 218, 0.2) 0 8%, transparent 19%),
+    radial-gradient(ellipse at 78% 58%, rgba(255, 239, 190, 0.18) 0 6%, transparent 17%);
+  animation: raceCloudDrift 46s linear infinite;
+}
+
+.race-skyline::after {
+  top: 18%;
+  opacity: 0.24;
+  background-image:
+    radial-gradient(ellipse at 10% 60%, rgba(255, 255, 255, 0.22) 0 6%, transparent 17%),
+    radial-gradient(ellipse at 52% 46%, rgba(255, 244, 208, 0.18) 0 7%, transparent 18%),
+    radial-gradient(ellipse at 88% 62%, rgba(255, 255, 255, 0.16) 0 5%, transparent 16%);
+  animation: raceCloudDriftReverse 68s linear infinite;
 }
 
 .race-track-perspective {

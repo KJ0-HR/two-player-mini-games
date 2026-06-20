@@ -91,7 +91,7 @@
               <label class="field game-select-field">
                 <span>房主选择游戏</span>
                 <select id="gameId" name="gameId">
-                  <option value="1">游戏 1：数学计算能力</option>
+                  <option value="1">游戏 1：数学竞赛</option>
                   <option value="2">游戏 2：五子棋对决</option>
                   <option value="3">游戏 3：赛车竞速</option>
                   <option value="4">游戏 4：待接入</option>
@@ -103,7 +103,7 @@
                 <button type="button" class="game-slice active" data-game="1">
                   <img src="./assets/game-math.png" alt="" />
                   <span class="slice-index">01</span>
-                  <strong>数学计算能力比拼</strong>
+                  <strong>数学竞赛</strong>
                 </button>
                 <button type="button" class="game-slice" data-game="2">
                   <img src="./assets/game-gomoku.png" alt="" />
@@ -124,6 +124,32 @@
                   <strong>敬请期待</strong>
                 </button>
               </div>
+
+              <section class="math-config-panel" id="mathConfigPanel" aria-label="数学竞赛设置">
+                <div>
+                  <span class="math-config-kicker">数学竞赛设置</span>
+                  <h3>选择题型方向与难度</h3>
+                  <p>房主创建后，双方进入房间会看到同一套设置。</p>
+                </div>
+                <div class="math-config-grid">
+                  <label class="field">
+                    <span>竞赛方向</span>
+                    <select id="mathSubject" name="mathSubject">
+                      <option value="linear">线性代数</option>
+                      <option value="calculus">高等数学</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>难度与每题时间</span>
+                    <select id="mathDifficulty" name="mathDifficulty">
+                      <option value="easy">简单 · 每题 2 分钟</option>
+                      <option value="medium">中等 · 每题 5 分钟</option>
+                      <option value="hard">难 · 每题 10 分钟</option>
+                      <option value="contest">竞赛题 · 每题 20 分钟</option>
+                    </select>
+                  </label>
+                </div>
+              </section>
 
               <div class="room-control-bar">
                 <button class="primary-action" type="submit" data-action="create">我是房主，一键创建房间</button>
