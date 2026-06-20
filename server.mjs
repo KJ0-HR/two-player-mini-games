@@ -1294,10 +1294,6 @@ async function handleApi(request, response, url) {
       sendJson(response, 404, { error: "没有找到这个房间，请先创建。" });
       return;
     }
-    if (payload.gameId && room.gameId !== payload.gameId) {
-      sendJson(response, 409, { error: "游戏序号和房间不匹配。" });
-      return;
-    }
     upsertPlayer(room, payload.playerId, payload.playerName, payload.playerAvatar);
     sendJson(response, 200, publicRoom(room));
     broadcast(room);

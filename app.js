@@ -197,9 +197,11 @@ async function enterRoom(action) {
     playerId: state.playerId,
     playerName: getPlayerName(),
     playerAvatar: getPlayerAvatar(),
-    gameId: gameId.value,
     roomCode: code,
   };
+  if (action === "create") {
+    payload.gameId = gameId.value;
+  }
   if (action === "create" && gameId.value === "1") {
     payload.mathSettings = {
       subject: mathSubject?.value || "calculus",
@@ -229,7 +231,7 @@ function openLobby(room) {
   document.body.dataset.view = "lobby";
   activeRoomCode.textContent = room.roomCode;
   activeGameName.textContent = gameNames[room.gameId] || `游戏 ${room.gameId}`;
-  inviteLink.value = `${location.origin}${location.pathname}?room=${room.roomCode}&game=${room.gameId}&guest=1`;
+  inviteLink.value = `${location.origin}${location.pathname}?room=${room.roomCode}&guest=1`;
   renderRoom(room);
   connectEvents();
   updateVisualMotion();
